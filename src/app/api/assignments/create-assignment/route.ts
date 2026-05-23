@@ -6,7 +6,7 @@ import type { Question, AssignmentInputStorage } from "../../../../../types/assi
 import { AssignmentInputModel } from "../../../../../models/assignmentInputs.model"
 import dbConnect from "../../../../../lib/db/dbConnect.js"
 import uploadFile from "@/../utils/uploadFile";
-import {assignmentQueue} from "@/../lib/redis/queue"
+import { assignmentQueue } from "@/../lib/redis/queue"
 
 export const POST = asyncHandler(async function (req: Request): Promise<NextResponse> {
 
@@ -66,7 +66,7 @@ export const POST = asyncHandler(async function (req: Request): Promise<NextResp
 
 
     // add to redis queue for processing:
-    await assignmentQueue.add("create-assignment-job", newAssignment, 
+    await assignmentQueue.add("create-assignment-job", newAssignment,
         {
             attempts: 3,
             backoff: {
