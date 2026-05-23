@@ -1,49 +1,18 @@
 "use client";
 
-import { LayoutDashboard, Group, Files, Book, ChartPie, X, Menu, User } from "lucide-react";
-import { JSX } from "react";
+import { Settings, User } from "lucide-react";
+import { JSX, useEffect } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSidebarStore } from "../../../store/sidebar.store.js"
-import type { SidebarItem } from "../../../types/components.types";
-
-
-const items: SidebarItem[] = [
-    {
-        name: "Home",
-        href: '/dashboard',
-        icon: <LayoutDashboard />
-    },
-    {
-        name: "My Groups",
-        href: '/groups',
-        icon: <Group />
-    },
-    {
-        name: "Assignments",
-        href: '/assignments',
-        icon: <Files />
-    },
-    {
-        name: "AI Teacher Toolkit",
-        href: '/ai-teacher-toolkit',
-        icon: <Book />
-    },
-    {
-        name: "My Library",
-        href: '/library',
-        icon: <ChartPie />
-    }
-]
-
-
-
+import { navItems } from "./navItems";
+import SidebarButton from "./SidebarButton";
+import { useSidebarStore } from "../../../store/sidebar.store";
 
 
 const sidebarVariants = {
     open: {
-        width: 200,
+        width: 300,
         transition: { duration: 0.3 }
     },
     closed: {
@@ -83,17 +52,23 @@ const MotionLink = motion.create(Link);
 
 export default function Sidebar(): JSX.Element {
 
-
     const pathname = usePathname();
     const isActive = (path: string) => pathname === path;
+    const { setActiveTab } = useSidebarStore();
 
-    const { isSidebarOpen, toggleSidebar } = useSidebarStore();
+    // Keep store in sync whenever the route changes
+    useEffect(() => {
+        const match = navItems.find((item) => item.href === pathname);
+        if (match) {
+            setActiveTab(match.name);
+        }
+    }, [pathname, setActiveTab]);
 
     return (
         <motion.div
             initial={false}
-            animate={isSidebarOpen ? 'open' : 'closed'}
-            style={{ display: 'flex', height: '100vh' }}
+            animate={'open'}
+            style={{ display: 'flex', height: '96vh', margin: '14px' }}
         >
             <motion.aside
                 variants={sidebarVariants}
@@ -107,41 +82,30 @@ export default function Sidebar(): JSX.Element {
                     overflow: 'hidden',
                     flexShrink: 0,
                 }}
+                className="rounded-md shadow-[0_1px_1px_rgba(0,0,0,0.5),0_4px_6px_rgba(34,42,53,0.04),0_24px_68px_rgba(47,48,55,0.05),0_2px_3px_rgba(0,0,0,0.04)]"
             >
-                <button
-                    onClick={toggleSidebar}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: isSidebarOpen ? 'flex-end' : 'center',
-                        padding: '8px 16px',
-                        marginBottom: 8,
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: '#888780',
-                        borderRadius: 8,
-                    }}
-                >
-                    {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
-                </button>
 
-                {isSidebarOpen && (
-                    <div style={{
-                        padding: '0 16px 12px',
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: '#b4b2a9',
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        whiteSpace: 'nowrap',
-                    }}>
-                        Menu
-                    </div>
-                )}
+                {/* VedaAI Logo */}
+                <div style={{
+                    padding: '4px 20px 16px',
+                    whiteSpace: 'nowrap',
+                }}>
+                    <span
+                        className="text-2xl text-amber-950"
+                        style={{ fontWeight: 700 }}
+                    >
+                        VedaAI
+                    </span>
+                </div>
 
+                {/* Branded CTA Button */}
+                <div className="px-3 pb-4">
+                    <SidebarButton text="Create Assignment" />
+                </div>
+
+                {/* Nav items */}
                 <motion.nav variants={listParentVariants} className="px-3">
-                    {items.map((link, index) => (
+                    {navItems.map((link, index) => (
                         <MotionLink
                             href={link.href}
                             variants={linkVariants}
@@ -162,38 +126,50 @@ export default function Sidebar(): JSX.Element {
                             <span style={{ flexShrink: 0, color: '#888780', display: 'flex' }}>
                                 {link.icon}
                             </span>
-                            {isSidebarOpen && <span>{link.name}</span>}
+                            <span>{link.name}</span>
                         </MotionLink>
                     ))}
-
                 </motion.nav>
 
+                {/* Bottom section: Settings + User */}
+                <div className="mt-auto w-full flex flex-col">
 
+                    {/* Settings button */}
+                    <div className="px-3 pb-1">
+                        <MotionLink
+                            href="/settings"
+                            variants={linkVariants}
+                            className={`${isActive('/settings') ? 'bg-neutral-200' : 'hover:bg-neutral-100'} rounded-lg transition-colors`}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                padding: '10px 16px',
+                                color: '#444441',
+                                textDecoration: 'none',
+                                fontSize: 14,
+                                fontWeight: 400,
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            <span style={{ flexShrink: 0, color: '#888780', display: 'flex' }}>
+                                <Settings size={20} />
+                            </span>
+                            <span>Settings</span>
+                        </MotionLink>
+                    </div>
 
-
-                <div
-                    className="mt-auto w-full flex flex-col items-center gap-3 py-3 px-4"
-                    style={{ borderTop: '0.5px solid #e0ddd6' }}
-                >
-                    <span className="flex gap-2 items-center justify-center text-xs text-neutral-600 w-full">
-                        <User size={12} />
-                        <span className="truncate">{"John Doe"}</span>
-                    </span>
-
-                    {/* <span className={`flex gap-2 items-center justify-center text-xs w-full ${userData?.email_verified ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50"} px-3 py-1 rounded-lg`}>
-                            {userData?.email_verified ? "Verified" : "Unverified"}
-                        </span> */}
-
-
-
-                    {/* <button
-                        className="text-sm text-neutral-600 flex items-center gap-2 justify-center w-full disabled:opacity-50"
-                        // onClick={logoutUser}
-                        // disabled={loggingOut}
+                    {/* User row */}
+                    <div
+                        className="w-full flex flex-col items-center gap-3 py-3 px-4"
+                        style={{ borderTop: '0.5px solid #e0ddd6' }}
                     >
-                        {loggingOut ? "Logging out..." : "Logout"}
-                        <LogOut size={14} />
-                    </button> */}
+                        <span className="flex gap-2 items-center justify-center text-xs text-neutral-600 w-full">
+                            <User size={12} />
+                            <span className="truncate">{"John Doe"}</span>
+                        </span>
+                    </div>
+
                 </div>
 
             </motion.aside>
