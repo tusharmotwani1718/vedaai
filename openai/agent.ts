@@ -72,7 +72,8 @@ async function createAssignment(assignmentInput: AssignmentInputStorage): Promis
         if (!parsed.success) {
             return {
                 success: false,
-                message: "Invalid AI response format"
+                message: "Invalid AI response format",
+                assignmentInputId: assignmentInput._id
             }
         }
 
@@ -84,29 +85,30 @@ async function createAssignment(assignmentInput: AssignmentInputStorage): Promis
         console.error("Error creating assignment:", error);
         return {
             success: false,
-            message: "An error occurred while creating the assignment."
+            message: "An error occurred while creating the assignment.",
+            assignmentInputId: assignmentInput._id
         }
     }
 }
 
 
-await createAssignment({
-    assignmentName: "Algebra Basics",
-    dueDate: new Date("2024-12-01"),
-    questionTypes: [{
-        type: "multiple-choice",
-        numberOfQuestions: 5,
-        marks: 50
-    }, {
-        type: "short-answer",
-        numberOfQuestions: 5,
-        marks: 50
-    }],
-    fileUrl: "instructions.txt",
-    totalQuestions: 10,
-    totalMarks: 100,
-    additionalNotes: "Focus on linear equations and inequalities."
-})
+// await createAssignment({
+//     assignmentName: "Algebra Basics",
+//     dueDate: new Date("2024-12-01"),
+//     questionTypes: [{
+//         type: "multiple-choice",
+//         numberOfQuestions: 5,
+//         marks: 50
+//     }, {
+//         type: "short-answer",
+//         numberOfQuestions: 5,
+//         marks: 50
+//     }],
+//     fileUrl: "instructions.txt",
+//     totalQuestions: 10,
+//     totalMarks: 100,
+//     additionalNotes: "Focus on linear equations and inequalities."
+// })
 
 
 export default createAssignment;

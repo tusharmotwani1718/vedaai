@@ -4,6 +4,11 @@ import { connection } from "./queue";
 
 import createAssignment from "../../openai/agent";
 
+import { AssignmentInputModel } from "../../models/assignmentInputs.model";
+import { AgentResponseModel } from "../../models/assignmentGenerations.model";
+
+import dbConnect from "../../lib/db/dbConnect";
+
 import type {
     AssignmentInputStorage
 } from "../../types/assignment.types";
@@ -18,43 +23,48 @@ const assignmentWorkerConsumer = async (
     job: Job<AssignmentInputStorage>
 ): Promise<AgentResponse> => {
 
-    console.log(
-        "Processing assignment job:",
-        job.data.assignmentName
+    console.log("Processing:", job.data.assignmentName);
+
+    const result = await createAssignment(job.data);
+
+    await dbConnect();
+
+    if (!result.success) {
+
+        await AssignmentInputModel.findByIdAndUpdate(
+            job.data._id,
+            {
+                status: "failed"
+            }
+        );
+
+        throw new Error(result.message);
+    }
+
+    await AssignmentInputModel.findByIdAndUpdate(
+        job.data._id,
+        {
+            status: "completed",
+            generatedAssignment: result
+        }
     );
 
-    try {
+    // store generated response:
+    await AgentResponseModel.create({
+        success: result.success,
+        message: result.message,
+        assignmentInputId: result.assignmentInputId,
+        assignment: result.assignment
+    })
 
-        const result = await createAssignment(
-            job.data
-        );
-
-        console.log(
-            "Assignment created successfully:",
-            result
-        );
-
-        return result;
-
-    } catch (error) {
-
-        console.error(
-            "Error processing assignment job:",
-            error
-        );
-
-        return {
-            success: false,
-            message: "Failed to create assignment"
-        };
-    }
+    return result;
 };
 
 const assignmentWorker = new Worker<
     AssignmentInputStorage,
     AgentResponse
 >(
-    "create-assignment-worker",
+    "assignment",
 
     assignmentWorkerConsumer,
 

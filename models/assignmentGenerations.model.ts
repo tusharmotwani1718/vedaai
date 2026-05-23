@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 import type { AgentResponse, GeneratedAssignment, AssignmentSection, GeneratedQuestion, AnswerSection } from "../schemas/assignment.zod-schema.ts";
 
 
@@ -99,7 +99,7 @@ const GeneratedAssignmentSchema = new Schema<GeneratedAssignment>({
 
 
 
-const AgentResponseSchema = new Schema<AgentResponse>({
+const AgentResponseSchema = new Schema({
     success: {
         type: Boolean,
         required: true
@@ -107,6 +107,11 @@ const AgentResponseSchema = new Schema<AgentResponse>({
     message: {
         type: String,
         required: true
+    },
+    assignmentInputId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "AssignmentInput"
     },
     assignment: {
         type: GeneratedAssignmentSchema,
@@ -116,6 +121,6 @@ const AgentResponseSchema = new Schema<AgentResponse>({
 
 
 
-export const AgentResponseModel = models.AgentResponse || model<AgentResponse>("AgentResponse", AgentResponseSchema);
+export const AgentResponseModel = mongoose.models.AgentResponse || model<AgentResponse>("AgentResponse", AgentResponseSchema);
 
-export const GeneratedAssignmentModel = models.GeneratedAssignment || model<GeneratedAssignment>("GeneratedAssignment", GeneratedAssignmentSchema);
+export const GeneratedAssignmentModel = mongoose.models.GeneratedAssignment || model<GeneratedAssignment>("GeneratedAssignment", GeneratedAssignmentSchema);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import mongoose from "mongoose";
 
 const GeneratedQuestionSchema = z.object({
   id: z.number(),
@@ -58,6 +59,8 @@ export const AgentResponseSchema = z.object({
   success: z.boolean(),
 
   message: z.string(),
+
+  assignmentInputId: z.string(),
 
   assignment: GeneratedAssignmentSchema.optional()
 });

@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 import type { Question, QuestionType, AssignmentInputStorage } from "../types/assignment.types.ts";
 
 
@@ -54,6 +54,12 @@ const AssignmentInputSchema = new Schema<AssignmentInputStorage>(
       required: true
     },
 
+    status: {
+      type: String,
+      default: "pending",
+      enum: ["pending", "completed", "failed"]
+    },
+
     fileUrl: String,
     additionalNotes: String
   },
@@ -63,7 +69,7 @@ const AssignmentInputSchema = new Schema<AssignmentInputStorage>(
 );
 
 export const AssignmentInputModel =
-  models.AssignmentInput ||
+  mongoose.models.AssignmentInput ||
   model<AssignmentInputStorage>(
     "AssignmentInput",
     AssignmentInputSchema

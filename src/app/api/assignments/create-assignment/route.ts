@@ -57,6 +57,7 @@ export const POST = asyncHandler(async function (req: Request): Promise<NextResp
         totalMarks,
         fileUrl,
         additionalNotes: additionalNotes || undefined,
+        status: "pending"
     })
 
     if (!newAssignment) {
@@ -75,7 +76,7 @@ export const POST = asyncHandler(async function (req: Request): Promise<NextResp
         }
     );
 
-    return new ApiResponse(200, "Assignment created successfully", {
+    return new ApiResponse(200, "Assignment sent for processing successfully", {
         assignment: newAssignment
     }).send()
 })

@@ -18,10 +18,14 @@ interface Assignment {
 }
 
 export interface AssignmentInputStorage extends Assignment {
+  _id: string;
   totalQuestions: number;
   totalMarks: number;
   fileUrl: string;
+  status: 'pending' | 'completed' | 'failed';
 }
+
+
 
 
 
