@@ -52,10 +52,7 @@ const GeneratedAssignmentSchema = z.object({
   answerKey: z.array(AnswerSectionSchema).optional()
 });
 
-// export const AgentResponseAssignmentSchema = z.object({
-//   sections: z.array(AssignmentSectionSchema),
-//   answerKey: z.array(AnswerSectionSchema).optional()
-// })
+
 
 export const AgentResponseSchema = z.object({
   success: z.boolean(),

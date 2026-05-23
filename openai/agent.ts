@@ -2,15 +2,16 @@ import { Agent, run } from '@openai/agents';
 import { systemPromptMainAgent } from "./utils/constants";
 import { AgentResponseSchema } from "../schemas/assignment.zod-schema"
 import dotenv from "dotenv";
-import type { AssignmentInput } from "../types/assignment.types"
+import type { AssignmentInput, AssignmentInputStorage } from "../types/assignment.types"
 import type { AgentResponse } from "../schemas/assignment.zod-schema"
+import getFileContent from "@/../utils/getFileContent"
 
 dotenv.config({
     path: "./.env"
 });
 
 
-
+const baseurl = "/uploads"
 
 
 
@@ -19,12 +20,45 @@ const agent = new Agent({
     instructions: `${systemPromptMainAgent}`,
     model: 'gpt-4.1-mini',
     outputType: AgentResponseSchema,
+    modelSettings: {
+        temperature: 0
+    }
 });
 
 
-async function createAssignment(assignmentInput: AssignmentInput): Promise<AgentResponse> {
+async function createAssignment(assignmentInput: AssignmentInputStorage): Promise<AgentResponse> {
     try {
-        const result = await run(agent, JSON.stringify(assignmentInput));
+
+        let fileType: "txt" | "pdf" | null = null;
+        let fileContent: string | null = null;
+
+        if (assignmentInput.fileUrl) {
+            assignmentInput.fileUrl = `${baseurl}/${assignmentInput.fileUrl}`;
+            fileType = assignmentInput.fileUrl.split('.').pop() as "txt" | "pdf";
+            fileContent = await getFileContent(assignmentInput.fileUrl, fileType);
+
+            console.log(`File content retrieved successfully from ${assignmentInput.fileUrl}`);
+            console.log(`📁📁`)
+            console.log(fileContent);
+        }
+
+
+
+        const result = await run(
+            agent,
+            `
+            Create an assignment using the following data:
+
+            ${JSON.stringify({
+                ...assignmentInput,
+                extraInfo: fileContent
+                    ? `Attached content:\n${fileContent}`
+                    : "No file attached"
+            })}
+
+            Return ONLY valid structured JSON matching the required schema.
+            `
+        );
 
         // console.log("Raw Agent Output:", result.finalOutput);
         console.log("Generating output for assignment creation...");
@@ -68,7 +102,8 @@ await createAssignment({
         numberOfQuestions: 5,
         marks: 50
     }],
+    fileUrl: "instructions.txt",
     totalQuestions: 10,
     totalMarks: 100,
-    additionalNotes: "Focus on linear equations and inequalities. The School name is ABC High School, the subject is Mathematics, and the class is 9th grade."
+    additionalNotes: "Focus on linear equations and inequalities."
 })

@@ -15,6 +15,12 @@ const systemPromptMainAgent: string = `
 
 
     If missing any of the required details, ask the user for the missing information before proceeding to create the assignment.
+
+    IMPORTANT: You could also be provided with an additional file (like a PDF or text file) that contains more information about the assignment. If such a file is provided, make sure to read and understand its content, and use that information to create a more comprehensive assignment.
+
+    - Do not include markdown
+    - Do not include explanations
+    - Do not include comments
 `
 
 
