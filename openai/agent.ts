@@ -1,6 +1,6 @@
 import { Agent, run } from '@openai/agents';
 import { systemPromptMainAgent } from "./utils/constants";
-import { AgentResponseSchema, AgentResponseAssignmentSchema } from "../schemas/assignment.zod-schema"
+import { AgentResponseSchema } from "../schemas/assignment.zod-schema"
 import dotenv from "dotenv";
 import type { AssignmentInput } from "../types/assignment.types"
 import type { AgentResponse } from "../schemas/assignment.zod-schema"
@@ -18,7 +18,7 @@ const agent = new Agent({
     name: 'Assignment Creator Agent',
     instructions: `${systemPromptMainAgent}`,
     model: 'gpt-4.1-mini',
-    outputType: AgentResponseAssignmentSchema,
+    outputType: AgentResponseSchema,
 });
 
 
@@ -70,5 +70,5 @@ await createAssignment({
     }],
     totalQuestions: 10,
     totalMarks: 100,
-    additionalNotes: "Focus on linear equations and inequalities."
+    additionalNotes: "Focus on linear equations and inequalities. The School name is ABC High School, the subject is Mathematics, and the class is 9th grade."
 })
