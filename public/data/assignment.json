@@ -1,0 +1,140 @@
+{
+  "success": true,
+  "message": "Assignment 'Algebra Basics' created successfully for due date 2024-12-01.",
+  "assignment": {
+    "schoolName": "N/A",
+    "subject": "Mathematics",
+    "className": "N/A",
+    "duration": "N/A",
+    "maximumMarks": 100,
+    "sections": [
+      {
+        "title": "Multiple Choice Questions",
+        "instructions": "Answer all the questions. Each question carries 10 marks.",
+        "questions": [
+          {
+            "id": 1,
+            "type": "multiple-choice",
+            "question": "What is the value of x in the equation 2x + 3 = 7?",
+            "options": [
+              "1",
+              "2",
+              "3",
+              "4"
+            ],
+            "marks": 10,
+            "difficulty": "easy",
+            "answer": "2"
+          },
+          {
+            "id": 2,
+            "type": "multiple-choice",
+            "question": "If 3x - 5 = 16, what is x?",
+            "options": [
+              "7",
+              "5",
+              "3",
+              "4"
+            ],
+            "marks": 10,
+            "difficulty": "easy",
+            "answer": "7"
+          },
+          {
+            "id": 3,
+            "type": "multiple-choice",
+            "question": "Which of the following is a solution to the inequality x - 4 &lt; 10?",
+            "options": [
+              "x = 15",
+              "x = 6",
+              "x = 14",
+              "x = 10"
+            ],
+            "marks": 10,
+            "difficulty": "moderate",
+            "answer": "x = 6"
+          },
+          {
+            "id": 4,
+            "type": "multiple-choice",
+            "question": "Solve for x: 5x + 2 = 17.",
+            "options": [
+              "3",
+              "5",
+              "7",
+              "9"
+            ],
+            "marks": 10,
+            "difficulty": "easy",
+            "answer": "3"
+          },
+          {
+            "id": 5,
+            "type": "multiple-choice",
+            "question": "If 2(x - 3) = 8, what is x?",
+            "options": [
+              "7",
+              "8",
+              "5",
+              "6"
+            ],
+            "marks": 10,
+            "difficulty": "moderate",
+            "answer": "7"
+          }
+        ]
+      },
+      {
+        "title": "Short Answer Questions",
+        "instructions": "Answer all the questions in brief. Each question carries 10 marks.",
+        "questions": [
+          {
+            "id": 6,
+            "type": "short-answer",
+            "question": "Explain how to solve a linear equation with one variable.",
+            "options": [],
+            "marks": 10,
+            "difficulty": "easy",
+            "answer": "Isolate the variable on one side by performing inverse operations."
+          },
+          {
+            "id": 7,
+            "type": "short-answer",
+            "question": "What does the inequality x + 5 &gt; 12 represent?",
+            "options": [],
+            "marks": 10,
+            "difficulty": "easy",
+            "answer": "All values of x greater than 7."
+          },
+          {
+            "id": 8,
+            "type": "short-answer",
+            "question": "How do you graph the solution of the inequality x &lt; 4 on a number line?",
+            "options": [],
+            "marks": 10,
+            "difficulty": "moderate",
+            "answer": "Draw an open circle at 4 and shade all numbers to the left."
+          },
+          {
+            "id": 9,
+            "type": "short-answer",
+            "question": "Find the value of x if 4x - 7 = 9.",
+            "options": [],
+            "marks": 10,
+            "difficulty": "moderate",
+            "answer": "x = 4"
+          },
+          {
+            "id": 10,
+            "type": "short-answer",
+            "question": "Describe a real-life example where linear inequalities can be used.",
+            "options": [],
+            "marks": 10,
+            "difficulty": "challenging",
+            "answer": "Budgeting expenses where costs should not exceed income."
+          }
+        ]
+      }
+    ]
+  }
+}

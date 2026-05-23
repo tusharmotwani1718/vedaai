@@ -13,9 +13,11 @@
     "@openai/agents": "^0.11.4",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "handlebars": "^4.7.9",
     "mongoose": "^9.6.2",
     "next": "16.2.6",
     "openai": "^6.39.0",
+    "puppeteer": "^25.0.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3"
