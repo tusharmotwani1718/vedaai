@@ -6,6 +6,7 @@ import type { Question, AssignmentInputStorage } from "../../../../../types/assi
 import { AssignmentInputModel } from "../../../../../models/assignmentInputs.model"
 import dbConnect from "../../../../../lib/db/dbConnect.js"
 import uploadFile from "@/../utils/uploadFile";
+import {assignmentQueue} from "@/../lib/redis/queue"
 
 export const POST = asyncHandler(async function (req: Request): Promise<NextResponse> {
 
@@ -18,12 +19,6 @@ export const POST = asyncHandler(async function (req: Request): Promise<NextResp
     const additionalNotes = formData.get("additionalNotes") as string | null;
 
     let fileUrl: string | undefined = undefined;
-
-
-
-
-
-
 
 
 
@@ -67,6 +62,18 @@ export const POST = asyncHandler(async function (req: Request): Promise<NextResp
     if (!newAssignment) {
         throw new ApiError(500, "Failed to create assignment")
     }
+
+
+    // add to redis queue for processing:
+    await assignmentQueue.add("create-assignment-job", newAssignment, 
+        {
+            attempts: 3,
+            backoff: {
+                type: "exponential",
+                delay: 1000
+            }
+        }
+    );
 
     return new ApiResponse(200, "Assignment created successfully", {
         assignment: newAssignment
