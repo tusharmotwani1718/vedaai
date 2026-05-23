@@ -4,7 +4,7 @@ import { ApiResponse } from "../../../../../lib/db/api-utils/ApiResponse"
 import { NextResponse } from "next/server"
 import type { AssignmentInput } from "../../../../../types/assignment.types"
 import { AssignmentInputModel } from "../../../../../models/assignmentInputs.model"
-import dbConnect from "../../../../../lib/db/dbConnect"
+import dbConnect from "../../../../../lib/db/dbConnect.js"
 
 
 export const POST = asyncHandler(async function (req: Request): Promise<NextResponse> {
