@@ -37,9 +37,9 @@ async function createAssignment(assignmentInput: AssignmentInputStorage): Promis
             fileType = assignmentInput.fileUrl.split('.').pop() as "txt" | "pdf";
             fileContent = await getFileContent(assignmentInput.fileUrl, fileType);
 
-            console.log(`File content retrieved successfully from ${assignmentInput.fileUrl}`);
-            console.log(`📁📁`)
-            console.log(fileContent);
+            // console.log(`File content retrieved successfully from ${assignmentInput.fileUrl}`);
+            // console.log(`📁📁`)
+            // console.log(fileContent);
         }
 
 

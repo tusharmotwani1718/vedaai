@@ -21,6 +21,9 @@ const systemPromptMainAgent: string = `
     - Do not include markdown
     - Do not include explanations
     - Do not include comments
+
+
+    Keep the fields like School name, Subject, class as unknown if not provided in the input. Do not make assumptions about them.
 `
 
 
