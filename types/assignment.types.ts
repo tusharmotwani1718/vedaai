@@ -10,25 +10,17 @@ export interface Question {
   marks: number;
 }
 
-export interface AssignmentInput {
+interface Assignment {
   assignmentName: string;
   dueDate: Date;
   questionTypes: Question[];
-  totalQuestions?: number;
-  totalMarks?: number;
-  file?: File;
-  // fileName?: string;
   additionalNotes?: string;
 }
 
-export interface AssignmentInputStorage {
-  assignmentName: string;
-  dueDate: Date;
-  questionTypes: Question[];
+export interface AssignmentInputStorage extends Assignment {
   totalQuestions: number;
   totalMarks: number;
   fileUrl: string;
-  additionalNotes?: string;
 }
 
 

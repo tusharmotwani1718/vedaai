@@ -2,7 +2,7 @@ import { Agent, run } from '@openai/agents';
 import { systemPromptMainAgent } from "./utils/constants";
 import { AgentResponseSchema } from "../schemas/assignment.zod-schema"
 import dotenv from "dotenv";
-import type { AssignmentInput, AssignmentInputStorage } from "../types/assignment.types"
+import type { AssignmentInputStorage } from "../types/assignment.types"
 import type { AgentResponse } from "../schemas/assignment.zod-schema"
 import getFileContent from "@/../utils/getFileContent"
 

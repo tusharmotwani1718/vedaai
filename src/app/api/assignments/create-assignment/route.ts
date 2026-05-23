@@ -2,7 +2,7 @@ import { asyncHandler } from "../../../../../lib/db/api-utils/asyncHandler"
 import { ApiError } from "../../../../../lib/db/api-utils/ApiError"
 import { ApiResponse } from "../../../../../lib/db/api-utils/ApiResponse"
 import { NextResponse } from "next/server"
-import type { AssignmentInput, Question, AssignmentInputStorage } from "../../../../../types/assignment.types"
+import type { Question, AssignmentInputStorage } from "../../../../../types/assignment.types"
 import { AssignmentInputModel } from "../../../../../models/assignmentInputs.model"
 import dbConnect from "../../../../../lib/db/dbConnect.js"
 import uploadFile from "@/../utils/uploadFile";

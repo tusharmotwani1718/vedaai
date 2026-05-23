@@ -37,13 +37,13 @@ const AnswerSectionSchema = z.object({
 });
 
 const GeneratedAssignmentSchema = z.object({
-  schoolName: z.string().optional(),
+  schoolName: z.string().default("Unknown"),
 
-  subject: z.string(),
+  subject: z.string().default("General"),
 
-  className: z.string(),
+  className: z.string().default("Unknown"),
 
-  duration: z.string(),
+  duration: z.string().default("Unknown"),
 
   maximumMarks: z.number(),
 
