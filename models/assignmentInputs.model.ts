@@ -1,5 +1,5 @@
 import mongoose, { Schema, model, models } from "mongoose";
-import type {Question, QuestionType, AssignmentInput} from "../types/assignment.types.ts";
+import type { Question, QuestionType, AssignmentInputStorage } from "../types/assignment.types.ts";
 
 
 
@@ -27,7 +27,7 @@ const QuestionSchema = new Schema<Question>(
   { _id: false }
 );
 
-const AssignmentInputSchema = new Schema<AssignmentInput>(
+const AssignmentInputSchema = new Schema<AssignmentInputStorage>(
   {
     assignmentName: {
       type: String,
@@ -55,7 +55,6 @@ const AssignmentInputSchema = new Schema<AssignmentInput>(
     },
 
     fileUrl: String,
-    fileName: String,
     additionalNotes: String
   },
   {
@@ -65,7 +64,7 @@ const AssignmentInputSchema = new Schema<AssignmentInput>(
 
 export const AssignmentInputModel =
   models.AssignmentInput ||
-  model<AssignmentInput>(
+  model<AssignmentInputStorage>(
     "AssignmentInput",
     AssignmentInputSchema
   );
