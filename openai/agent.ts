@@ -107,3 +107,6 @@ await createAssignment({
     totalMarks: 100,
     additionalNotes: "Focus on linear equations and inequalities."
 })
+
+
+export default createAssignment;
