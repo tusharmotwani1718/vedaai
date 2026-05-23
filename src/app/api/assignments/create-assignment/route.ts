@@ -2,24 +2,32 @@ import { asyncHandler } from "../../../../../lib/db/api-utils/asyncHandler"
 import { ApiError } from "../../../../../lib/db/api-utils/ApiError"
 import { ApiResponse } from "../../../../../lib/db/api-utils/ApiResponse"
 import { NextResponse } from "next/server"
-import type { AssignmentInput } from "../../../../../types/assignment.types"
+import type { AssignmentInput, Question, AssignmentInputStorage } from "../../../../../types/assignment.types"
 import { AssignmentInputModel } from "../../../../../models/assignmentInputs.model"
 import dbConnect from "../../../../../lib/db/dbConnect.js"
-
+import uploadFile from "@/../utils/uploadFile";
 
 export const POST = asyncHandler(async function (req: Request): Promise<NextResponse> {
 
-    const body = await req.json()
-    const {
-        assignmentName,
-        dueDate,
-        questionTypes,
-        fileName,
-        fileUrl
-    } : AssignmentInput = body;
+    const formData = await req.formData();
+
+    const file = formData.get("file") as File | null;
+    const assignmentName = formData.get("assignmentName") as string;
+    const dueDate = formData.get("dueDate") as string;
+    const questionTypes = JSON.parse(formData.get("questionTypes") as string) as Question[];
+    const additionalNotes = formData.get("additionalNotes") as string | null;
+
+    let fileUrl: string | undefined = undefined;
 
 
-    if(!assignmentName || !dueDate || !questionTypes ) {
+
+
+
+
+
+
+
+    if (!assignmentName || !dueDate || !questionTypes) {
         throw new ApiError(400, "Missing required fields: assignmentName, dueDate, questionTypes")
     }
 
@@ -29,28 +37,38 @@ export const POST = asyncHandler(async function (req: Request): Promise<NextResp
     let totalMarks = 0;
     let totalQuestions = 0;
 
-    questionTypes.map((questionType) => {
+    questionTypes.map((questionType: Question) => {
         totalMarks += questionType.marks * questionType.numberOfQuestions;
         totalQuestions += questionType.numberOfQuestions;
     })
 
 
+    // handle file upload if file is present
+    if (file) {
+        fileUrl = await uploadFile(file);
+        fileUrl = fileUrl.replace(/\\/g, "/").replace(" ", "_").trim().toLowerCase();
+        console.log("File uploaded successfully. URL:", fileUrl);
+    }
+
+
     await dbConnect();
 
 
-    const newAssignment: AssignmentInput = await AssignmentInputModel.create({
+    const newAssignment: AssignmentInputStorage = await AssignmentInputModel.create({
         assignmentName,
         dueDate,
         questionTypes,
         totalQuestions,
         totalMarks,
-        fileName,
-        fileUrl
+        fileUrl,
+        additionalNotes: additionalNotes || undefined,
     })
 
-    if(!newAssignment) {
+    if (!newAssignment) {
         throw new ApiError(500, "Failed to create assignment")
     }
 
-    return new ApiResponse(200, "Assignment created successfully", newAssignment).send()
+    return new ApiResponse(200, "Assignment created successfully", {
+        assignment: newAssignment
+    }).send()
 })

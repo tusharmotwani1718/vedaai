@@ -16,10 +16,22 @@ export interface AssignmentInput {
   questionTypes: Question[];
   totalQuestions?: number;
   totalMarks?: number;
-  fileUrl?: string;
-  fileName?: string;
+  file?: File;
+  // fileName?: string;
   additionalNotes?: string;
 }
+
+export interface AssignmentInputStorage {
+  assignmentName: string;
+  dueDate: Date;
+  questionTypes: Question[];
+  totalQuestions: number;
+  totalMarks: number;
+  fileUrl: string;
+  additionalNotes?: string;
+}
+
+
 
 
 // Generated Assignment:
