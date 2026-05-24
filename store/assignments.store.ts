@@ -10,6 +10,7 @@ interface AssignmentStore {
     isInitialized: boolean;
 
     fetchAssignments: () => Promise<void>;
+    updateStatus: (assignmentId: string, status: 'failed' | 'completed') => Promise<void>;
 }
 
 export const useAssignmentStore = create<AssignmentStore>((set) => ({
@@ -43,4 +44,14 @@ export const useAssignmentStore = create<AssignmentStore>((set) => ({
             });
         }
     },
+    updateStatus: async (assignmentId: string, status: 'failed' | 'completed') => {
+        set((state) => ({
+            assignments: state.assignments.map((assignment) => {
+                if (assignment._id === assignmentId) {
+                    return { ...assignment, status: status };
+                }
+                return assignment;
+            })
+        }))
+    }
 }));

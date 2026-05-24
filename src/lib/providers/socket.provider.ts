@@ -6,8 +6,12 @@ import socket from "../../../lib/socket/socket";
 
 import { toast } from "sonner";
 
+import { useAssignmentStore } from "../../../store/assignments.store";
+
 
 export default function SocketProvider() {
+
+    const {updateStatus} = useAssignmentStore();
 
     useEffect(() => {
 
@@ -65,7 +69,12 @@ export default function SocketProvider() {
                 toast.success(
                     `${data.assignmentName} generated successfully`
                 );
+
+                updateStatus(data.assignmentId, "completed");
             }
+
+            
+            
         );
 
         socket.on(
@@ -81,6 +90,9 @@ export default function SocketProvider() {
                 toast.error(
                     `${data.assignmentName} generation failed`
                 );
+
+                updateStatus(data.assignmentId, "failed");
+
             }
         );
 
