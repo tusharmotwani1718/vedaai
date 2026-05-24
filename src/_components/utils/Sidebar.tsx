@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, User } from "lucide-react";
+import { Settings, User, Menu, X } from "lucide-react";
 import { JSX, useEffect } from "react";
 import { motion } from "motion/react";
 import Link from "next/link";
@@ -54,7 +54,7 @@ export default function Sidebar(): JSX.Element {
 
     const pathname = usePathname();
     const isActive = (path: string) => pathname === path;
-    const { setActiveTab } = useSidebarStore();
+    const { setActiveTab, isSidebarOpen, toggleSidebar } = useSidebarStore();
 
     // Keep store in sync whenever the route changes
     useEffect(() => {
@@ -67,7 +67,7 @@ export default function Sidebar(): JSX.Element {
     return (
         <motion.div
             initial={false}
-            animate={"open"}
+            animate={isSidebarOpen ? 'open' : 'closed'}
             className="fixed top-0 left-0 z-50"
             style={{
                 display: "flex",
@@ -75,6 +75,9 @@ export default function Sidebar(): JSX.Element {
                 padding: "14px",
             }}
         >
+
+
+
             <motion.aside
                 variants={sidebarVariants}
                 style={{
@@ -95,18 +98,43 @@ export default function Sidebar(): JSX.Element {
                     padding: '4px 20px 16px',
                     whiteSpace: 'nowrap',
                 }}>
-                    <span
-                        className="text-2xl text-amber-950"
-                        style={{ fontWeight: 700 }}
+                    {
+                        isSidebarOpen && (
+                            <span
+                                className="text-2xl text-amber-950"
+                                style={{ fontWeight: 700 }}
+                            >
+                                VedaAI
+                            </span>
+                        )
+                    }
+
+                    <button
+                        onClick={toggleSidebar}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: isSidebarOpen ? 'flex-end' : 'center',
+                            padding: '8px',
+                            marginBottom: 8,
+                            cursor: 'pointer',
+                            color: '#888780',
+                            borderRadius: 8,
+                        }}
+                        className="mx-auto text-center pr-2 font-semibold mr-2"
                     >
-                        VedaAI
-                    </span>
+                        {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
+                    </button>
                 </div>
 
                 {/* Branded CTA Button */}
-                <div className="px-3 pb-4">
-                    <SidebarButton text="Create Assignment" />
-                </div>
+                {
+                    isSidebarOpen && (
+                        <div className="px-3 pb-4">
+                            <SidebarButton text="Create Assignment" />
+                        </div>
+                    )
+                }
 
                 {/* Nav items */}
                 <motion.nav variants={listParentVariants} className="px-3">
@@ -131,7 +159,7 @@ export default function Sidebar(): JSX.Element {
                             <span style={{ flexShrink: 0, color: '#888780', display: 'flex' }}>
                                 {link.icon}
                             </span>
-                            <span>{link.name}</span>
+                            {isSidebarOpen && <span>{link.name}</span>}
                         </MotionLink>
                     ))}
                 </motion.nav>
@@ -171,7 +199,7 @@ export default function Sidebar(): JSX.Element {
                     >
                         <span className="flex gap-2 items-center justify-center text-xs text-neutral-600 w-full">
                             <User size={12} />
-                            <span className="truncate">{"John Doe"}</span>
+                            <span className="truncate">{"Delhi Public School"}</span>
                         </span>
                     </div>
 

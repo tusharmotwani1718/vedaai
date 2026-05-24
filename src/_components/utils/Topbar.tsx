@@ -10,7 +10,7 @@ import Link from "next/link";
 
 export default function Topbar(): JSX.Element {
     const router = useRouter();
-    const { activeTabName } = useSidebarStore();
+    const { activeTabName, isSidebarOpen } = useSidebarStore();
 
 
     const { IsAnyNewNotification } = useNotificationsStore();
