@@ -19,6 +19,7 @@ import type {
 
 import { connectPubSub, publisher } from "./pubsub";
 
+import { NotificationsModel } from "../../models/notifications.model";
 
 await connectPubSub();
 
@@ -49,6 +50,13 @@ const assignmentWorkerConsumer = async (
                 status: "failed"
             }
         );
+
+        await NotificationsModel.create({
+            title: "Assignment Creation Failed",
+            message: result.message || "Failed to create assignment",
+            assignmentName: job.data.assignmentName,
+            assignmentId: job.data._id
+        })
 
 
 
