@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+To start the app, run the following commands in different terminals:
 
-## Getting Started
 
-First, run the development server:
+# MAKE SURE TO UPDATE YOUR ENV VARS WITH SAMPLE ENV VARS PRVIDED AT .env.sample AT ROOT DIR
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+<!-- To start the docker compose. Make sure docker is installed and engine is running -->
+1. docker compose up -d 
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+<!-- To start the app with socket server -->
+2. npm run socket-server
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+<!-- To start the worker -->
+3. npm run worker
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+The app would be available at http://localhost:3000
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+View the complete guide to start the app and demo video here:
 
-## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+Approach: 
+
+# Tools Used: 
+1. Next.js -> full stack framework
+2. Typescript -> static type checking
+3. MongoDB -> Database
+4. Redis/BullMQ -> Queue
+5. Socket.io -> Realtime communication (Client - Server)
+6. Open AI SDK -> LLM Integration
+7. Redis/Pub-Sub -> (Server - Server) Realtime communication
+
+
+# Approach:
+
+1. Create a new assignment:
+
+a. User inputs assignment name, due date, question types, total questions, total marks, and any additional notes or files.
+b. All the inputs are passed to the agent and the agent generates the assignment.
+
+
+2. Background job processor:
+
+a. The assignment to be generated is stored in a redis queue "assignment-queue" using BullMQ.
+b. The worker pulls the assignment from the queue and passes it to the agent.
+c. The agent generates the assignment and stores it in a MongoDB database.
+d. The notification of the assignment generated is passed via the redis pub/sub from the worker to the socker server and then to the client via socket.io
+
+
+# Important Directories:
+
+a. lib/redis -> stores worker, queue, and pub/sub for background job processing and realtime communication between worker and socket server
+b. openai -> stores agent code and logic
+c. models -> stores database models
+d. utils -> stores utility functions
+e. lib/db -> stores database connection and api utils
+f. store -> store zustand stores
+g. types -> stores types
+h. uploads -> files uploaded for assignment inputs
