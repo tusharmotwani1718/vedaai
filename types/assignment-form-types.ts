@@ -1,20 +1,26 @@
-export interface QuestionRow {
+export interface QuestionType {
   id: string;
   type: string;
-  count: number;
+  numberOfQuestions: number;
   marks: number;
 }
 
+export interface UploadedFileType {
+  name: string;
+  size: number;
+  type: string;
+  previewUrl?: string;
+  actualFile?: File;
+}
+
 export interface AssignmentFormValues {
-  uploadedFile: {
-    name: string;
-    size: number;
-    type: string;
-    previewUrl?: string;
-  } | null;
+  assignmentName: string;
+  uploadedFile: UploadedFileType | null;
   dueDate: string;
-  questions: QuestionRow[];
-  additionalInfo: string;
+
+  questionTypes: QuestionType[];
+
+  additionalNotes: string;
 }
 
 export const QUESTION_TYPES = [

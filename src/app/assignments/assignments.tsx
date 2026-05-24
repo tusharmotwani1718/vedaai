@@ -4,11 +4,18 @@ import React, { useEffect } from 'react';
 import { EllipsisVertical } from 'lucide-react';
 import { useAssignmentStore } from '../../../store/assignments.store';
 import { convertDatetoString } from '../../../utils/functions/convertDatetoString';
+import { Loader } from "../../_components/utils/loader";
 
 function AssignmentCard({
     name = "Assignment Name",
     assignedOn = "2023-01-01",
     dueDate = "2023-02-01",
+    status = "pending"
+}: {
+    name: string;
+    assignedOn: string | undefined;
+    dueDate: string;
+    status: "pending" | "completed" | "failed";
 }) {
     return (
         <div className="flex flex-col min-h-32 bg-white shadow-md justify-between p-3 px-5 rounded-xl min-w-lg">
@@ -23,15 +30,26 @@ function AssignmentCard({
             <div className="flex items-center justify-between">
                 <p className='text-sm font-bold'>
                     Assigned On:
-                    <span className='opacity-60 font-light ml-1'>
-                        {assignedOn}
-                    </span>
+                    {
+                        assignedOn && (
+                            <span className='opacity-60 font-light ml-1'>
+                                {assignedOn}
+                            </span>
+                        )
+                    }
                 </p>
 
                 <p className='text-sm font-bold'>
                     Due:
                     <span className='opacity-60 font-light ml-1'>
                         {convertDatetoString(new Date(dueDate))}
+                    </span>
+                </p>
+
+                <p className='text-sm font-bold'>
+                    Status:
+                    <span className='opacity-60 font-light ml-1'>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
                     </span>
                 </p>
             </div>
@@ -45,6 +63,7 @@ function Assignments() {
         assignments,
         loading,
         error,
+        isInitialized
     } = useAssignmentStore();
 
     useEffect(() => {
@@ -52,10 +71,18 @@ function Assignments() {
     }, []);
 
     if (loading) {
-        return <p>Loading assignments...</p>;
+        return (
+            <div className='w-full flex items-center justify-center h-screen'>
+                <Loader />
+            </div>
+        );
     }
 
-    if((!loading && !assignments.length) || (!loading && assignments.length === 0)) {
+    if (
+        isInitialized &&
+        !loading &&
+        !assignments.length
+    ) {
         return <p>No assignments found</p>;
     }
 
@@ -67,11 +94,13 @@ function Assignments() {
         <div className='flex flex-wrap gap-6 items-center justify-center my-4'>
             {
                 assignments.map((assignment) => {
+                    console.log(assignment);
                     return (
                         <div key={assignment._id}>
                             <AssignmentCard
                                 name={assignment.assignmentName}
                                 assignedOn={"20-01-2023"}
+                                status={assignment.status}
                                 dueDate={assignment.dueDate.toString()}
                             />
                         </div>

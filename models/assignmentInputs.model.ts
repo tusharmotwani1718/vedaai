@@ -8,10 +8,10 @@ const QuestionSchema = new Schema<Question>(
     type: {
       type: String,
       enum: [
-        "multiple-choice",
-        "short-answer",
-        "Diagram/Graph based",
-        "numerical"
+        "Multiple Choice Questions",
+        "Short Questions",
+        "Diagram/Graph-Based Questions",
+        "Numerical Problems"
       ],
       required: true
     },

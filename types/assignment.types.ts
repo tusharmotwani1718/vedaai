@@ -1,8 +1,8 @@
 export type QuestionType =
-  | "multiple-choice"
-  | "short-answer"
-  | "Diagram/Graph based"
-  | "numerical";
+  | "Multiple Choice Questions"
+  | "Short Questions"
+  | "Diagram/Graph-Based Questions"
+  | "Numerical Problems";
 
 export interface Question {
   type: QuestionType;

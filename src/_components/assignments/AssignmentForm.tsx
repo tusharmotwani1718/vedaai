@@ -1,15 +1,15 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
-import { 
-  UploadCloud, 
-  CalendarPlus, 
-  Plus, 
-  Minus, 
-  Mic, 
-  MicOff, 
-  FileText, 
-  CheckCircle2, 
+import {
+  UploadCloud,
+  CalendarPlus,
+  Plus,
+  Minus,
+  Mic,
+  MicOff,
+  FileText,
+  CheckCircle2,
   Trash2,
   ChevronDown,
   X,
@@ -18,47 +18,47 @@ import {
   Sparkles
 } from "lucide-react";
 import { QUESTION_TYPES, AssignmentFormValues } from "../../../types/assignment-form-types";
+import axios from "axios";
+import { toast } from "sonner";
 
-export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (data: AssignmentFormValues) => void }) {
+export default function AssignmentForm() {
   const [isDragging, setIsDragging] = useState(false);
   const [showTypeDropdown, setShowTypeDropdown] = useState<number | null>(null);
-  const [isListening, setIsListening] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [speechAnimation, setSpeechAnimation] = useState<number[]>([]);
   const dropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Default values matching the image exactly!
   const defaultValues: AssignmentFormValues = {
+    assignmentName: "",
     uploadedFile: null,
     dueDate: "2026-06-30", // Placeholder default
-    questions: [
-      { id: "1", type: "Multiple Choice Questions", count: 4, marks: 1 },
-      { id: "2", type: "Short Questions", count: 3, marks: 2 },
-      { id: "3", type: "Diagram/Graph-Based Questions", count: 5, marks: 5 },
-      { id: "4", type: "Numerical Problems", count: 5, marks: 5 },
+    questionTypes: [
+      { id: "1", type: "Multiple Choice Questions", numberOfQuestions: 4, marks: 1 },
+      { id: "2", type: "Short Questions", numberOfQuestions: 3, marks: 2 },
+      { id: "3", type: "Diagram/Graph-Based Questions", numberOfQuestions: 5, marks: 5 },
+      { id: "4", type: "Numerical Problems", numberOfQuestions: 5, marks: 5 },
     ],
-    additionalInfo: ""
+    additionalNotes: ""
   };
 
-  const { register, control, handleSubmit, setValue, watch, formState: { errors } } = useForm<AssignmentFormValues>({
+  const { register, control, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<AssignmentFormValues>({
     defaultValues
   });
 
   const { fields, append, remove, update } = useFieldArray({
     control,
-    name: "questions"
+    name: "questionTypes"
   });
 
-  const questionsWatch = watch("questions") || [];
+  const questionTypesWatch = watch("questionTypes") || [];
   const uploadedFile = watch("uploadedFile");
-  const additionalInfo = watch("additionalInfo");
+  const additionalNotes = watch("additionalNotes");
 
   // Dynamic calculations:
-  // Note: Is "Total Questions = 25" in the image a mathematical total or something custom?
-  // Let's compute actual total count = sum of all question counts.
-  // Let's compute actual total marks = sum of (count * marks). Let's make sure it updates live!
-  const totalQuestionsSum = questionsWatch.reduce((acc, curr) => acc + (Number(curr?.count) || 0), 0);
-  const totalMarksSum = questionsWatch.reduce((acc, curr) => acc + ((Number(curr?.count) || 0) * (Number(curr?.marks) || 0)), 0);
+  const totalQuestionsSum = questionTypesWatch.reduce(
+    (acc, curr) => acc + (Number(curr?.numberOfQuestions) || 0),
+    0
+  );
+  const totalMarksSum = questionTypesWatch.reduce((acc, curr) => acc + ((Number(curr?.numberOfQuestions) || 0) * (Number(curr?.marks) || 0)), 0);
 
   // Drag and Drop handlers
   const handleDragOver = (e: React.DragEvent) => {
@@ -82,26 +82,25 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelected = (file: File) => {
-    // Basic validations
-    if (file.size > 10 * 1024 * 1024) {
-      alert("File size exceeds 10MB limit.");
+    if (file.size > 1 * 1024 * 1024) {
+      toast.error("File size should be less than 1MB.");
       return;
     }
 
-    if (!file.type.startsWith("image/") && file.type !== "application/pdf" && !file.type.includes("document")) {
-      alert("Please upload a valid image or document (JPEG, PNG, PDF, etc.)");
+    if (
+      file.type !== "text/plain" &&
+      file.type !== "application/pdf"
+    ) {
+      toast.error("Only .txt and .pdf files are allowed.");
       return;
     }
 
-    // Mock file setup
-    const fileData = {
+    setValue("uploadedFile", {
       name: file.name,
       size: file.size,
       type: file.type,
-      previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined
-    };
-
-    setValue("uploadedFile", fileData);
+      actualFile: file
+    });
   };
 
   const removeUploadedFile = (e: React.MouseEvent) => {
@@ -123,50 +122,93 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showTypeDropdown]);
 
-  // Audio wave visualizer effect helper
-  useEffect(() => {
-    let interval: any;
-    if (isListening) {
-      interval = setInterval(() => {
-        const waves = Array.from({ length: 12 }, () => Math.floor(Math.random() * 24) + 4);
-        setSpeechAnimation(waves);
-      }, 100);
-    } else {
-      setSpeechAnimation([]);
-    }
-    return () => clearInterval(interval);
-  }, [isListening]);
 
-  // Simulated Mic voice dictation toggle
-  const toggleListening = () => {
-    if (isListening) {
-      setIsListening(false);
-    } else {
-      setIsListening(true);
-      // Simulate listening and typing after 2.5 seconds
-      setTimeout(() => {
-        const currentText = additionalInfo ? `${additionalInfo} ` : "";
-        setValue("additionalInfo", `${currentText}Add detailed sections covering basic definitions, followed by analytical case studies with a strict marking scheme of 2 marks per MCQ context, and visual schemas for diagrammatic parts.`);
-        setIsListening(false);
-      }, 3500);
-    }
-  };
 
   // Form submit handler
-  const handleFormSubmit = (data: AssignmentFormValues) => {
-    setIsSubmitted(true);
-    onSubmitSuccess(data);
-    // Smooth reset behavior trigger
-    setTimeout(() => {
-      setIsSubmitted(false);
-    }, 4000);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleFormSubmit = async (
+    data: AssignmentFormValues
+  ) => {
+    try {
+      setIsLoading(true);
+
+      const formData = new FormData();
+
+      // required fields
+      formData.append(
+        "assignmentName",
+        data.assignmentName
+      );
+
+      formData.append(
+        "dueDate",
+        data.dueDate
+      );
+
+      // questionTypes -> JSON string
+      formData.append(
+        "questionTypes",
+        JSON.stringify(
+          data.questionTypes.map((question) => ({
+            type: question.type,
+            numberOfQuestions:
+              question.numberOfQuestions,
+            marks: question.marks
+          }))
+        )
+      );
+
+      // optional additional notes
+      if (data.additionalNotes?.trim()) {
+        formData.append(
+          "additionalNotes",
+          data.additionalNotes.trim()
+        );
+      }
+
+      // optional file upload
+      if (data.uploadedFile?.actualFile) {
+        formData.append(
+          "file",
+          data.uploadedFile.actualFile
+        );
+      }
+
+      const response = await axios.post(
+        "/api/assignments/create-assignment",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      )
+
+      reset();
+
+      console.log(
+        "Assignment submitted successfully:",
+        response.data
+      );
+
+      toast.success(
+        response.data.message || "Assignment submitted successfully"
+      );
+    } catch (error) {
+      console.error("Submission Error:", error);
+
+      toast.error("Error submitting assignment. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       {/* Container Box */}
       <div id="assignment-details-card" className="bg-[#f0f2f5] border border-[#e4e7eb] rounded-[36px] p-6 sm:p-10 select-none shadow-xs max-w-2xl mx-auto">
-        
+
         {/* Title Block */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-[#1E2022] tracking-tight antialiased">
@@ -177,23 +219,38 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
           </p>
         </div>
 
+        {/* Assignment Name */}
+        <div className="mb-6">
+          <label className="text-sm font-bold text-[#1E2022] block mb-2 tracking-wide">
+            Assignment Name
+          </label>
+          <input
+            type="text"
+            {...register("assignmentName", { required: "Assignment name is required" })}
+            placeholder="e.g. Chapter 5 — Forces & Motion"
+            className="w-full bg-[#EAECEF]/90 border-0 focus:bg-white focus:ring-2 focus:ring-gray-300 transition-all rounded-full px-5 py-3 text-sm text-[#2F343A] font-semibold placeholder-gray-400 focus:outline-none"
+          />
+          {errors.assignmentName && (
+            <p className="text-red-500 text-xs font-semibold mt-1.5 pl-3">{errors.assignmentName.message}</p>
+          )}
+        </div>
+
         {/* Drag and Drop Zone */}
-        <div 
+        <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-3xl bg-white transition-all duration-300 cursor-pointer flex flex-col items-center justify-center p-8 text-center ${
-            isDragging 
-              ? "border-[#1E2022] bg-gray-50/50 scale-[0.99] ring-4 ring-gray-100" 
-              : "border-[#D8DDE4] hover:border-gray-400 hover:scale-[1.005]"
-          }`}
+          className={`relative border-2 border-dashed rounded-3xl bg-white transition-all duration-300 cursor-pointer flex flex-col items-center justify-center p-8 text-center ${isDragging
+            ? "border-[#1E2022] bg-gray-50/50 scale-[0.99] ring-4 ring-gray-100"
+            : "border-[#D8DDE4] hover:border-gray-400 hover:scale-[1.005]"
+            }`}
         >
-          <input 
-            type="file" 
+          <input
+            type="file"
             ref={fileInputRef}
-            className="hidden" 
-            accept="image/*,application/pdf"
+            className="hidden"
+            accept=".txt,.pdf,text/plain,application/pdf"
             onChange={(e) => e.target.files?.[0] && handleFileSelected(e.target.files[0])}
           />
 
@@ -208,7 +265,7 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
                 Choose a file or drag & drop it here
               </h3>
               <p className="text-[#8B93A1] text-xs font-bold tracking-wider mt-1.5 uppercase">
-                JPEG, PNG, upto 10MB
+                TXT, PDF, up to 10MB
               </p>
 
               {/* Browse Button */}
@@ -223,9 +280,9 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
             <div className="w-full flex flex-col items-center p-2">
               {uploadedFile.previewUrl ? (
                 <div className="relative mb-3 group">
-                  <img 
-                    src={uploadedFile.previewUrl} 
-                    alt="Preview" 
+                  <img
+                    src={uploadedFile.previewUrl}
+                    alt="Preview"
                     className="w-24 h-24 object-cover rounded-xl border border-gray-100 shadow-sm"
                     referrerPolicy="no-referrer"
                   />
@@ -236,7 +293,7 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
                   <FileText className="text-gray-500 w-7 h-7" />
                 </div>
               )}
-              
+
               <div className="max-w-70">
                 <p className="text-sm font-semibold text-gray-800 truncate" title={uploadedFile.name}>
                   {uploadedFile.name}
@@ -259,7 +316,7 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
 
         {/* Upload helpers explanation */}
         <p className="text-[#8B93A1] text-xs sm:text-sm text-center mt-3 font-medium">
-          Upload images of your preferred document/image
+          Upload txt/pdf files only (Optional)
         </p>
 
         {/* Due Date Element */}
@@ -268,7 +325,7 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
             Due Date
           </label>
           <div className="relative">
-            <input 
+            <input
               type="date"
               {...register("dueDate", { required: "Due date is required" })}
               className="w-full bg-[#EAECEF]/90 border-0 focus:bg-white focus:ring-2 focus:ring-gray-300 transition-all rounded-full px-5 py-3 text-sm text-[#2F343A] font-semibold placeholder-gray-400 focus:outline-none cursor-pointer appearance-none"
@@ -302,13 +359,13 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
           {/* Rows List */}
           <div className="space-y-3">
             {fields.map((field, index) => {
-              const currentQuestion = questionsWatch[index] || { count: 1, marks: 1, type: "" };
+              const currentQuestion = questionTypesWatch[index] || { numberOfQuestions: 1, marks: 1, type: "" };
 
               return (
                 <div key={field.id} className="grid grid-cols-[1fr_24px_100px_100px] gap-3 items-center">
-                  
+
                   {/* Select Dropdown custom-styled */}
-                  <div 
+                  <div
                     ref={(el) => { dropdownRefs.current[index] = el; }}
                     className="relative"
                   >
@@ -328,17 +385,16 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
                             key={typeOption}
                             type="button"
                             onClick={() => {
-                              update(index, { 
-                                ...field, 
-                                type: typeOption 
+                              update(index, {
+                                ...field,
+                                type: typeOption
                               });
                               setShowTypeDropdown(null);
                             }}
-                            className={`w-full text-left px-5 py-2.5 text-xs sm:text-sm font-medium transition-colors ${
-                              currentQuestion.type === typeOption 
-                                ? "bg-[#1E2022] text-white" 
-                                : "text-gray-700 hover:bg-gray-100"
-                            }`}
+                            className={`w-full text-left px-5 py-2.5 text-xs sm:text-sm font-medium transition-colors ${currentQuestion.type === typeOption
+                              ? "bg-[#1E2022] text-white"
+                              : "text-gray-700 hover:bg-gray-100"
+                              }`}
                           >
                             {typeOption}
                           </button>
@@ -353,35 +409,34 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
                       type="button"
                       onClick={() => fields.length > 1 ? remove(index) : null}
                       disabled={fields.length <= 1}
-                      className={`text-[#848B96] hover:text-black hover:scale-110 active:scale-95 transition-all text-sm font-bold flex items-center justify-center p-1 w-6 h-6 select-none ${
-                        fields.length <= 1 ? "opacity-30 cursor-not-allowed" : "cursor-pointer"
-                      }`}
+                      className={`text-[#848B96] hover:text-black hover:scale-110 active:scale-95 transition-all text-sm font-bold flex items-center justify-center p-1 w-6 h-6 select-none ${fields.length <= 1 ? "opacity-30 cursor-not-allowed" : "cursor-pointer"
+                        }`}
                       title="Remove Row"
                     >
                       <span className="text-sm">×</span>
                     </button>
                   </div>
 
-                  {/* No. of Questions pill counter */}
+                  {/* No. of Questions pill numberOfQuestionser */}
                   <div className="flex items-center justify-between bg-white border border-gray-50 rounded-full px-3 py-1.5 shadow-2xs select-none">
                     <button
                       type="button"
                       onClick={() => {
-                        const newCount = Math.max(1, currentQuestion.count - 1);
-                        update(index, { ...field, count: newCount });
+                        const newnumberOfQuestions = Math.max(1, currentQuestion.numberOfQuestions - 1);
+                        update(index, { ...field, numberOfQuestions: newnumberOfQuestions });
                       }}
                       className="text-[#9BA3AF] hover:text-[#1E2022] font-semibold active:scale-120 transition p-1 cursor-pointer"
                     >
                       <Minus size={14} className="stroke-[2.5]" />
                     </button>
                     <span className="font-bold text-[#1E2022] text-sm">
-                      {currentQuestion.count}
+                      {currentQuestion.numberOfQuestions}
                     </span>
                     <button
                       type="button"
                       onClick={() => {
-                        const newCount = Math.min(100, currentQuestion.count + 1);
-                        update(index, { ...field, count: newCount });
+                        const newnumberOfQuestions = Math.min(100, currentQuestion.numberOfQuestions + 1);
+                        update(index, { ...field, numberOfQuestions: newnumberOfQuestions });
                       }}
                       className="text-[#9BA3AF] hover:text-[#1E2022] font-semibold active:scale-120 transition p-1 cursor-pointer"
                     >
@@ -389,7 +444,7 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
                     </button>
                   </div>
 
-                  {/* Marks pill counter */}
+                  {/* Marks pill numberOfQuestionser */}
                   <div className="flex items-center justify-between bg-white border border-gray-50 rounded-full px-3 py-1.5 shadow-2xs select-none">
                     <button
                       type="button"
@@ -423,15 +478,20 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
 
           {/* Add Row and Summary Section Block */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-5 gap-4">
-            
+
             {/* Add Question Button */}
             <button
               type="button"
               onClick={() => {
                 // Find next unused quest type or default to Short Questions
-                const usedTypes = questionsWatch.map(q => q.type);
+                const usedTypes = questionTypesWatch.map(q => q.type);
                 const nextType = QUESTION_TYPES.find(t => !usedTypes.includes(t)) || QUESTION_TYPES[1];
-                append({ id: String(Date.now()), type: nextType, count: 5, marks: 5 });
+                append({
+                  id: String(Date.now()),
+                  type: nextType,
+                  numberOfQuestions: 5,
+                  marks: 5
+                });
               }}
               className="flex items-center gap-2.5 font-bold text-xs sm:text-sm text-[#1E2022] hover:text-black transition-colors duration-150 cursor-pointer select-none py-1 group"
             >
@@ -461,41 +521,14 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
           </label>
           <div className="relative">
             <textarea
-              {...register("additionalInfo")}
+              {...register("additionalNotes")}
               placeholder="e.g Generate a question paper for 3 hour exam duration..."
               rows={4}
               className="w-full bg-[#EAECEF]/40 hover:bg-[#EAECEF]/50 focus:bg-white border-2 border-dashed border-[#D1D5DC] focus:border-gray-400 focus:ring-1 focus:ring-gray-300 transition-all rounded-3xl p-5 text-sm text-gray-700 placeholder-gray-400/90 focus:outline-none resize-none pr-14 leading-relaxed font-medium"
             />
-            
-            {/* Listening mic indicator overlay widget */}
-            {isListening && (
-              <div className="absolute left-6 bottom-5 flex items-center gap-1.5 bg-[#1E2022] text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-                <div className="flex gap-0.5">
-                  {speechAnimation.slice(0, 4).map((h, i) => (
-                    <div 
-                      key={i} 
-                      className="w-0.5 bg-white rounded-full transition-all duration-100" 
-                      style={{ height: `${h / 2}px` }} 
-                    />
-                  ))}
-                </div>
-                Listening...
-              </div>
-            )}
 
-            {/* Micro mic absolute button lower right */}
-            <button
-              type="button"
-              onClick={toggleListening}
-              className={`absolute right-4 bottom-5 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                isListening 
-                  ? "bg-red-500 text-white animate-bounce shadow-md" 
-                  : "bg-white hover:bg-gray-100 text-gray-700 border border-gray-100 shadow-sm hover:scale-105 active:scale-95"
-              }`}
-              title={isListening ? "Stop listening" : "Simulate voice input"}
-            >
-              {isListening ? <MicOff size={15} /> : <Mic size={15} className="stroke-[2.2]" />}
-            </button>
+
+
           </div>
         </div>
 
@@ -505,14 +538,17 @@ export default function AssignmentForm({ onSubmitSuccess }: { onSubmitSuccess: (
             type="submit"
             className="w-full bg-[#1E2022] hover:bg-black text-white py-3.5 px-6 rounded-full font-bold text-sm sm:text-base tracking-wide transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
           >
-            {isSubmitted ? (
+            {isLoading ? (
               <>
-                <CheckCircle2 size={18} className="animate-mid-ping" />
-                Assignment Rules Loaded
+                <RefreshCw
+                  size={18}
+                  className="animate-spin"
+                />
+                Processing...
               </>
             ) : (
               <>
-                <Sparkles size={18} className="stroke-[2.5]" />
+                <Sparkles size={18} />
                 Proceed with Assignment Details
               </>
             )}
