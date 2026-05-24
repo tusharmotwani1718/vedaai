@@ -10,7 +10,7 @@ export interface Question {
   marks: number;
 }
 
-interface Assignment {
+export interface Assignment {
   assignmentName: string;
   dueDate: Date;
   questionTypes: Question[];
