@@ -11,14 +11,14 @@ dotenv.config({
 });
 
 
-const baseurl = "/uploads"
+const baseurl = "/"
 
 
 
 const agent = new Agent({
     name: 'Assignment Creator Agent',
     instructions: `${systemPromptMainAgent}`,
-    model: 'gpt-4.1-mini',
+    model: 'gpt-4.1',
     outputType: AgentResponseSchema,
     modelSettings: {
         temperature: 0
@@ -33,7 +33,7 @@ async function createAssignment(assignmentInput: AssignmentInputStorage): Promis
         let fileContent: string | null = null;
 
         if (assignmentInput.fileUrl) {
-            assignmentInput.fileUrl = `${baseurl}/${assignmentInput.fileUrl}`;
+            assignmentInput.fileUrl = `${assignmentInput.fileUrl}`;
             fileType = assignmentInput.fileUrl.split('.').pop() as "txt" | "pdf";
             fileContent = await getFileContent(assignmentInput.fileUrl, fileType);
 

@@ -17,6 +17,11 @@ import type {
     AgentResponse
 } from "../../schemas/assignment.zod-schema";
 
+import { connectPubSub, publisher } from "./pubsub";
+
+
+await connectPubSub();
+
 
 // Worker processor
 const assignmentWorkerConsumer = async (
@@ -26,6 +31,9 @@ const assignmentWorkerConsumer = async (
     console.log("Processing:", job.data.assignmentName);
 
     const result = await createAssignment(job.data);
+
+    console.log("result");
+    console.log(result);
 
     await dbConnect();
 
@@ -56,6 +64,14 @@ const assignmentWorkerConsumer = async (
         assignmentInputId: result.assignmentInputId,
         assignment: result.assignment
     })
+
+    // send notification to socket server:
+    await publisher.publish("assignment-events", JSON.stringify({
+        event: "assignment-generated",
+        assignmentId: job.data._id,
+        assignmentName: job.data.assignmentName,
+        status: result.success ? "completed" : "failed"
+    }));
 
     return result;
 };

@@ -23,6 +23,9 @@ const systemPromptMainAgent: string = `
     - Do not include comments
 
 
+    IMPORTANT:
+    - READ THE PROVIDED INPUTS CAREFULLY TO CREATE A PROPER ASSIGNMENT. GENERATE THE ASSIGNMENT WITH AS PER THE GIVEN INPUTS STRICTLY. MAKE NO MISTAKES.
+
     Keep the fields like School name, Subject, class as unknown if not provided in the input. Do not make assumptions about them.
 `
 

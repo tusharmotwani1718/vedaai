@@ -117,6 +117,8 @@ const AgentResponseSchema = new Schema({
         type: GeneratedAssignmentSchema,
         required: false
     }
+}, {
+    timestamps: true
 })
 
 

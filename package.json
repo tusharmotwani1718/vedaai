@@ -7,7 +7,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "worker": "npx tsx ./lib/redis/worker.ts",
+    "pubsub": "npx tsx ./lib/redis/pubsub.ts",
+    "subscriber": "npx tsx ./lib/redis/subscriber.ts"
   },
   "dependencies": {
     "@openai/agents": "^0.11.4",
@@ -28,6 +31,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.76.1",
+    "redis": "^5.12.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3",
