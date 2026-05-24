@@ -22,7 +22,4 @@ export const QUESTION_TYPES = [
   "Short Questions",
   "Diagram/Graph-Based Questions",
   "Numerical Problems",
-  "Long Answer Questions",
-  "True or False",
-  "Fill in the Blanks"
 ];

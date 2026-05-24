@@ -67,8 +67,13 @@ export default function Sidebar(): JSX.Element {
     return (
         <motion.div
             initial={false}
-            animate={'open'}
-            style={{ display: 'flex', height: '96vh', margin: '14px' }}
+            animate={"open"}
+            className="fixed top-0 left-0 z-50"
+            style={{
+                display: "flex",
+                height: "100vh",
+                padding: "14px",
+            }}
         >
             <motion.aside
                 variants={sidebarVariants}
@@ -77,7 +82,7 @@ export default function Sidebar(): JSX.Element {
                     borderRight: '0.5px solid #e0ddd6',
                     display: 'flex',
                     flexDirection: 'column',
-                    height: '100%',
+                    height: 'calc(100vh - 28px)',
                     padding: '12px 0',
                     overflow: 'hidden',
                     flexShrink: 0,

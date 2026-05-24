@@ -14,99 +14,128 @@ export default function Topbar(): JSX.Element {
 
     return (
         <div
-            style={{
-                background: '#ffffff',
-                border: '0.5px solid #e0ddd6',
-                borderRadius: '8px',
-                margin: '14px 14px 0 0',
-                padding: '0 16px',
-                height: '52px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexShrink: 0,
-            }}
-            className="shadow-[0_1px_1px_rgba(0,0,0,0.5),0_4px_6px_rgba(34,42,53,0.04),0_24px_68px_rgba(47,48,55,0.05),0_2px_3px_rgba(0,0,0,0.04)]"
+            className="
+            fixed
+            top-3.5
+            right-3.5
+            left-82
+            z-30
+
+            h-13
+            px-4
+
+            flex
+            items-center
+            justify-between
+
+            rounded-lg
+            border
+            border-[#e0ddd6]
+
+            bg-white
+            backdrop-blur-md
+
+            shadow-[0_1px_1px_rgba(0,0,0,0.5),0_4px_6px_rgba(34,42,53,0.04),0_24px_68px_rgba(47,48,55,0.05),0_2px_3px_rgba(0,0,0,0.04)]
+        "
         >
-            {/* Left: back arrow + divider + tab icon + tab name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Left Section */}
+            <div className="flex items-center gap-2.5">
+
+                {/* Back Button */}
                 <button
                     onClick={() => router.back()}
                     title="Go back"
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '6px',
-                        borderRadius: '8px',
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#888780',
-                        cursor: 'pointer',
-                    }}
-                    className="hover:bg-neutral-100 transition-colors"
+                    className="
+                    flex
+                    items-center
+                    justify-center
+
+                    p-1.5
+                    rounded-lg
+
+                    text-[#888780]
+
+                    hover:bg-neutral-100
+                    transition-colors
+                "
                 >
                     <ArrowLeft size={17} />
                 </button>
 
-                {/* Vertical divider */}
-                <div style={{ width: 1, height: 16, background: '#e0ddd6' }} />
+                {/* Divider */}
+                <div className="w-px h-4 bg-[#e0ddd6]" />
 
-                {/* Active tab icon */}
-                <span style={{ display: 'flex', alignItems: 'center', color: '#888780', flexShrink: 0 }}>
+                {/* Active Tab Icon */}
+                <span className="flex items-center shrink-0 text-[#888780]">
                     {activeItem.icon}
                 </span>
 
-                {/* Active tab name */}
-                <span className="opacity-50 font-semibold">
+                {/* Active Tab Name */}
+                <span className="font-semibold opacity-50">
                     {activeItem.name}
                 </span>
             </div>
 
-            {/* Right: notifications bell + divider + user avatar + name */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {/* Notification bell */}
+            {/* Right Section */}
+            <div className="flex items-center gap-2.5">
+
+                {/* Notification Button */}
                 <button
                     title="Notifications"
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '6px',
-                        borderRadius: '8px',
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#888780',
-                        cursor: 'pointer',
-                    }}
-                    className="hover:bg-neutral-100 transition-colors"
+                    className="
+                    flex
+                    items-center
+                    justify-center
+
+                    p-1.5
+                    rounded-lg
+
+                    text-[#888780]
+
+                    hover:bg-neutral-100
+                    transition-colors
+                "
                 >
                     <Bell size={17} />
                 </button>
 
-                {/* Vertical divider */}
-                <div style={{ width: 1, height: 16, background: '#e0ddd6' }} />
+                {/* Divider */}
+                <div className="w-px h-4 bg-[#e0ddd6]" />
 
-                {/* User avatar + name */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '50%',
-                        background: '#f0ede8',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                    }}>
-                        <User size={14} style={{ color: '#888780' }} />
+                {/* User */}
+                <div className="flex items-center gap-2">
+
+                    {/* Avatar */}
+                    <div
+                        className="
+                        w-7
+                        h-7
+
+                        rounded-full
+                        bg-[#f0ede8]
+
+                        flex
+                        items-center
+                        justify-center
+
+                        shrink-0
+                    "
+                    >
+                        <User
+                            size={14}
+                            className="text-[#888780]"
+                        />
                     </div>
-                    <span style={{
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: '#444441',
-                        whiteSpace: 'nowrap',
-                    }}>
+
+                    {/* Name */}
+                    <span
+                        className="
+                        text-[13px]
+                        font-medium
+                        text-[#444441]
+                        whitespace-nowrap
+                    "
+                    >
                         John Doe
                     </span>
                 </div>
