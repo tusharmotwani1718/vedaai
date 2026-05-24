@@ -187,10 +187,10 @@ export default function AssignmentForm() {
 
       reset();
 
-      console.log(
-        "Assignment submitted successfully:",
-        response.data
-      );
+      // console.log(
+      //   "Assignment submitted successfully:",
+      //   response.data
+      // );
 
       toast.success(
         response.data.message || "Assignment submitted successfully"

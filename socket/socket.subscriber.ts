@@ -34,7 +34,11 @@ async function startSocketSubscriber() {
             );
 
 
-            io.to(data.roomId).emit(
+            console.log(
+                "EMITTING GLOBALLY"
+            );
+
+            io.emit(
                 data.type,
                 data.payload
             );

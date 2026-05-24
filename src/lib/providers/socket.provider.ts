@@ -11,6 +11,11 @@ export default function SocketProvider() {
 
     useEffect(() => {
 
+        console.log(
+            "SocketProvider mounted"
+        );
+
+
         socket.on("connect", () => {
 
             console.log(
@@ -21,6 +26,28 @@ export default function SocketProvider() {
             socket.emit(
                 "join",
                 "teacher_room"
+            );
+        });
+
+        socket.on(
+            "connect_error",
+
+            (err) => {
+
+                console.log(
+                    "SOCKET ERROR:",
+                    err
+                );
+            }
+        );
+
+
+        socket.onAny((event, ...args) => {
+
+            console.log(
+                "SOCKET EVENT RECEIVED:",
+                event,
+                args
             );
         });
 
@@ -35,7 +62,9 @@ export default function SocketProvider() {
                     data
                 );
 
-                toast.success(`${data.assignmentName} generated successfully`);
+                toast.success(
+                    `${data.assignmentName} generated successfully`
+                );
             }
         );
 
@@ -45,22 +74,20 @@ export default function SocketProvider() {
             (data) => {
 
                 console.log(
-                    "Failed:",
+                    "REALTIME EVENT:",
                     data
                 );
 
-                toast.error(`${data.assignmentName} generation failed`);
+                toast.error(
+                    `${data.assignmentName} generation failed`
+                );
             }
         );
 
 
         return () => {
 
-            socket.off("connect");
-
-            socket.off(
-                "assignment-completed"
-            );
+            socket.off();
         };
 
     }, []);

@@ -1,62 +1,87 @@
 import { Server } from "socket.io";
 
-let io: Server;
+
+declare global {
+
+    var ioGlobal: Server | undefined;
+}
 
 
 function initSocket(server: any) {
 
-    io = new Server(server, {
+    if (!global.ioGlobal) {
 
-        cors: {
-            origin: "*"
-        }
-    });
+        global.ioGlobal = new Server(server, {
 
-    io.on("connection", (socket) => {
-
-        console.log(
-            "Client connected:",
-            socket.id
-        );
+            cors: {
+                origin: "*"
+            }
+        });
 
 
-        // user joins their own room
-        socket.on(
-            "join",
+        global.ioGlobal.on(
 
-            (userId: string = "teacher_room") => {
+            "connection",
 
-                socket.join(userId);
+            (socket) => {
 
                 console.log(
-                    `User ${userId} joined room`
+                    "Client connected:",
+                    socket.id
+                );
+
+
+                socket.on(
+
+                    "join",
+
+                    async (roomId: string) => {
+
+                        console.log(
+                            "JOIN EVENT RECEIVED:",
+                            roomId
+                        );
+
+                        await socket.join(roomId);
+
+                        console.log(
+                            "SOCKET ROOMS:",
+                            [...socket.rooms]
+                        );
+                    }
+                );
+
+
+                socket.on(
+
+                    "disconnect",
+
+                    () => {
+
+                        console.log(
+                            "Client disconnected:",
+                            socket.id
+                        );
+                    }
                 );
             }
         );
+    }
 
-
-        socket.on("disconnect", () => {
-
-            console.log(
-                "Client disconnected:",
-                socket.id
-            );
-        });
-    });
-
-    return io;
+    return global.ioGlobal;
 }
 
 
 function getIO() {
 
-    if (!io) {
+    if (!global.ioGlobal) {
+
         throw new Error(
             "Socket.io not initialized"
         );
     }
 
-    return io;
+    return global.ioGlobal;
 }
 
 

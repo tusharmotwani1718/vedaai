@@ -94,7 +94,6 @@ function Assignments() {
         <div className='flex flex-wrap gap-6 items-center justify-center my-4'>
             {
                 assignments.map((assignment) => {
-                    console.log(assignment);
                     return (
                         <div key={assignment._id}>
                             <AssignmentCard
