@@ -1,5 +1,8 @@
-import React from 'react';
+"use client"
+
+import React, { useEffect } from 'react';
 import { Bell } from 'lucide-react';
+import {useNotificationsStore} from "../../../store/notifications.store";
 import type { NotificationType } from '../../../types/notifications.types';
 
 function NotificationsList({
@@ -7,6 +10,8 @@ function NotificationsList({
 }: {
     notifications: NotificationType[];
 }) {
+
+    const { setNewNotification, IsAnyNewNotification } = useNotificationsStore();
 
     if (!notifications.length) {
         return (
@@ -16,6 +21,11 @@ function NotificationsList({
             </div>
         );
     }
+
+    useEffect(() => {
+        setNewNotification();
+        // console.log(IsAnyNewNotification);
+    }, []);
 
     return (
         <div className="flex flex-col gap-3 w-full max-w-2xl mx-auto p-4">

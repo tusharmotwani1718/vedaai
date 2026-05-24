@@ -4,7 +4,6 @@ import NotificationsList from '@/_components/notifications/NotificationsList';
 import { Suspense } from 'react';
 import { Loader } from '@/_components/utils/loader';
 
-
 async function page() {
 
     const notifications = await NotificationsModel.find({}).lean().sort({ createdAt: -1 });

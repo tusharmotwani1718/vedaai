@@ -49,6 +49,42 @@ async function startSocketSubscriber() {
         }
     );
 
+
+    await socketSubscriber.subscribe(
+        "notification-events",
+
+        async (message) => {
+
+            console.log(
+                "RAW MESSAGE:",
+                message
+            );
+
+            const data =
+                JSON.parse(message);
+
+            console.log(
+                "Received Redis Event:",
+                data
+            );
+
+
+            console.log(
+                "EMITTING GLOBALLY"
+            );
+
+            io.emit(
+                data.type,
+                data.payload
+            );
+
+            console.log(
+                "Socket event emitted"
+            );
+        }
+
+    );
+
     console.log(
         "Socket subscriber connected"
     );

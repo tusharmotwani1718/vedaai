@@ -105,7 +105,7 @@ export default function Topbar(): JSX.Element {
                     >
                         <Bell size={17} />
                         {IsAnyNewNotification && (
-                            <span>New</span>
+                            <span className="bg-blue-500 text-white text-xs rounded-full px-3 py-1 ml-1">New</span>
                         )}
                     </button>
                 </Link>

@@ -32,7 +32,7 @@ const assignmentWorkerConsumer = async (
 
     console.log("Processing:", job.data.assignmentName);
 
-    
+
     const result = await createAssignment(job.data);
 
     console.log("result");
@@ -61,7 +61,29 @@ const assignmentWorkerConsumer = async (
         })
 
 
-        
+
+        await publisher.publish(
+            "notification-events",
+            JSON.stringify({
+
+                type: "notification-assignment-failed",
+
+                roomId: "teacher_room",
+
+                payload: {
+
+                    assignmentId:
+                        job.data._id,
+
+                    assignmentName:
+                        job.data.assignmentName,
+
+                    status: "failed",
+
+                    title: "Assignment Creation Failed",
+                }
+            })
+        )
 
 
 
@@ -102,12 +124,35 @@ const assignmentWorkerConsumer = async (
     );
 
     await NotificationsModel.create({
-            title: "Assignment Creation Successful",
-            message: result.message || "Successfully created assignment",
-            assignmentName: job.data.assignmentName,
-            assignmentId: job.data._id
+        title: "Assignment Creation Successful",
+        message: result.message || "Successfully created assignment",
+        assignmentName: job.data.assignmentName,
+        assignmentId: job.data._id
+    })
+
+    await publisher.publish(
+        "notification-events",
+        JSON.stringify({
+
+            type: "notification-assignment-completed",
+
+            roomId: "teacher_room",
+
+            payload: {
+
+                assignmentId:
+                    job.data._id,
+
+                assignmentName:
+                    job.data.assignmentName,
+
+                status: "completed",
+
+                title: "Assignment Creation Successful",
+            }
         })
-        
+    )
+
 
     // store generated response:
     await AgentResponseModel.create({

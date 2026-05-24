@@ -8,10 +8,13 @@ import { toast } from "sonner";
 
 import { useAssignmentStore } from "../../../store/assignments.store";
 
+import { useNotificationsStore } from "../../../store/notifications.store";
+
 
 export default function SocketProvider() {
 
-    const {updateStatus} = useAssignmentStore();
+    const { updateStatus } = useAssignmentStore();
+    const { setNewNotification } = useNotificationsStore();
 
     useEffect(() => {
 
@@ -73,8 +76,8 @@ export default function SocketProvider() {
                 updateStatus(data.assignmentId, "completed");
             }
 
-            
-            
+
+
         );
 
         socket.on(
@@ -95,6 +98,38 @@ export default function SocketProvider() {
 
             }
         );
+
+
+        socket.on(
+            "notification-assignment-completed",
+
+            (data) => {
+
+                console.log(
+                    "REALTIME EVENT:",
+                    data
+                );
+
+                setNewNotification();
+
+            }
+        )
+
+
+        socket.on(
+            "notification-assignment-failed",
+
+            (data) => {
+
+                console.log(
+                    "REALTIME EVENT:",
+                    data
+                );
+
+                setNewNotification();
+
+            }
+        )
 
 
         return () => {
