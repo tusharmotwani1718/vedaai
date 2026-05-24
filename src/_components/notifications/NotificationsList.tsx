@@ -31,7 +31,7 @@ function NotificationsList({
         <div className="flex flex-col gap-3 w-full max-w-2xl mx-auto p-4">
             {notifications.map((notification) => (
                 <div
-                    key={notification._id}
+                    key={String(notification._id)}
                     className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
                 >
                     <div className="flex items-start justify-between gap-4">
