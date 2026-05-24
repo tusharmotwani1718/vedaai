@@ -37,6 +37,10 @@ const assignmentWorkerConsumer = async (
 
     await dbConnect();
 
+    console.log(
+        "Publishing completion event"
+    );
+
     if (!result.success) {
 
         await AssignmentInputModel.findByIdAndUpdate(
@@ -44,6 +48,31 @@ const assignmentWorkerConsumer = async (
             {
                 status: "failed"
             }
+        );
+
+
+
+        await publisher.publish(
+
+            "assignment-events",
+
+            JSON.stringify({
+
+                type: "assignment-failed",
+
+                roomId: "teacher_room",
+
+                payload: {
+
+                    assignmentId:
+                        job.data._id,
+
+                    assignmentName:
+                        job.data.assignmentName,
+
+                    status: "failed"
+                }
+            })
         );
 
         throw new Error(result.message);
@@ -66,12 +95,32 @@ const assignmentWorkerConsumer = async (
     })
 
     // send notification to socket server:
-    await publisher.publish("assignment-events", JSON.stringify({
-        event: "assignment-generated",
-        assignmentId: job.data._id,
-        assignmentName: job.data.assignmentName,
-        status: result.success ? "completed" : "failed"
-    }));
+    await publisher.publish(
+
+        "assignment-events",
+
+        JSON.stringify({
+
+            type: "assignment-completed",
+
+            roomId: "teacher_room",
+
+            payload: {
+
+                assignmentId:
+                    job.data._id,
+
+                assignmentName:
+                    job.data.assignmentName,
+
+                status: "completed"
+            }
+        })
+    );
+
+    console.log(
+        "Publishing completion event"
+    );
 
     return result;
 };

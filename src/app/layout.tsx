@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Sidebar from "@/_components/utils/Sidebar";
 import Topbar from "@/_components/utils/Topbar";
 import { Toaster } from 'sonner';
+import SocketProvider from "@/lib/providers/socket.provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,6 +32,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-screen bg-neutral-50">
+        <SocketProvider />
 
         {/* Fixed Sidebar */}
         <Sidebar />

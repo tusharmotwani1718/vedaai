@@ -1,28 +1,26 @@
 import { createClient } from "redis";
 
-// publisher client
 const publisher = createClient({
     url: "redis://localhost:6379"
 });
 
+const socketSubscriber =
+    publisher.duplicate();
 
-// subscriber client
-const subscriber = publisher.duplicate();
 
-// connect both clients
 async function connectPubSub() {
 
     await publisher.connect();
 
-    await subscriber.connect();
+    await socketSubscriber.connect();
 
-    console.log("Redis Pub/Sub connected");
+    console.log(
+        "Redis Pub/Sub connected"
+    );
 }
-
-
 
 export {
     publisher,
-    subscriber,
+    socketSubscriber,
     connectPubSub
 };
