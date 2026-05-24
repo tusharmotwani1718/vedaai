@@ -21,6 +21,7 @@ import { connectPubSub, publisher } from "./pubsub";
 
 import { NotificationsModel } from "../../models/notifications.model";
 
+
 await connectPubSub();
 
 
@@ -31,6 +32,7 @@ const assignmentWorkerConsumer = async (
 
     console.log("Processing:", job.data.assignmentName);
 
+    
     const result = await createAssignment(job.data);
 
     console.log("result");
@@ -57,6 +59,11 @@ const assignmentWorkerConsumer = async (
             assignmentName: job.data.assignmentName,
             assignmentId: job.data._id
         })
+
+
+        
+
+
 
 
 
@@ -93,6 +100,14 @@ const assignmentWorkerConsumer = async (
             generatedAssignment: result
         }
     );
+
+    await NotificationsModel.create({
+            title: "Assignment Creation Successful",
+            message: result.message || "Successfully created assignment",
+            assignmentName: job.data.assignmentName,
+            assignmentId: job.data._id
+        })
+        
 
     // store generated response:
     await AgentResponseModel.create({

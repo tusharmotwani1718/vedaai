@@ -1,24 +1,24 @@
 "use client";
 
 import React, { useEffect } from 'react';
-import { EllipsisVertical, Trash2, Eye } from 'lucide-react';
+import { EllipsisVertical, Trash2, Eye, Sparkles, Plus } from 'lucide-react';
 import { useAssignmentStore } from '../../../store/assignments.store';
 import { convertDatetoString } from '../../../utils/functions/convertDatetoString';
 import { Loader } from "../../_components/utils/loader";
 import { Dropdown, Space } from 'antd';
 import Link from 'next/link';
+import Image from "next/image"
+import SidebarButton from '@/_components/utils/SidebarButton';
 
 function AssignmentCard({
     _id,
     name = "Assignment Name",
-    assignedOn = "2023-01-01",
     dueDate = "2023-02-01",
     status = "pending",
     onDelete,
 }: {
     _id: string;
     name: string;
-    assignedOn: string | undefined;
     dueDate: string;
     status: "pending" | "completed" | "failed";
     onDelete?: (id: string) => void;
@@ -117,17 +117,7 @@ function AssignmentCard({
                 </Dropdown>
             </div>
 
-            {/* Bottom row: Assigned and Due aligned side-by-side perfectly */}
             <div className="flex items-center justify-between mt-8">
-                {/* Left: Assigned On */}
-                <p className="text-[13.5px] font-semibold text-gray-900 font-sans tracking-tight">
-                    {"Assigned on : "}
-                    {assignedOn && (
-                        <span className="text-gray-400 font-normal ml-0.5">
-                            {formatToDDMMYYYY(assignedOn)}
-                        </span>
-                    )}
-                </p>
 
                 {/* Right: Due Date */}
                 <p className="text-[13.5px] font-semibold text-gray-900 font-sans tracking-tight">
@@ -167,7 +157,33 @@ function Assignments() {
         !loading &&
         !assignments.length
     ) {
-        return <p>No assignments found</p>;
+        return (
+            <div className='flex flex-col h-[70vh] items-center justify-center gap-4'>
+                <Image
+                    src={'/illustrations/noItems.svg'}
+                    alt="No Assignments"
+                    width={300}
+                    height={300}
+                />
+                <h1 className="text-3xl font-bold text-gray-900">
+                    No Assignments Found
+                </h1>
+                <Link href={'/assignments/create-assignment'}>
+                    <button
+                        className={`w-68 cursor-pointer transition-opacity hover:opacity-90 active:opacity-80 rounded-3xl flex items-center gap-3 justify-center bg-gray-950`}
+                        style={{
+                            padding: '10px 16px',
+                            color: '#ffffff',
+                            fontSize: 16,
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        <Plus />
+                        Create First Assignment
+                    </button>
+                </Link>
+            </div>
+        );
     }
 
     if (error) {
@@ -183,7 +199,6 @@ function Assignments() {
                             <AssignmentCard
                                 _id={assignment._id}
                                 name={assignment.assignmentName}
-                                assignedOn={"20-01-2023"}
                                 status={assignment.status}
                                 dueDate={assignment.dueDate.toString()}
                             />

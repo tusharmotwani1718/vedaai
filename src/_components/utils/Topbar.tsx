@@ -5,10 +5,15 @@ import { JSX } from "react";
 import { useRouter } from "next/navigation";
 import { useSidebarStore } from "../../../store/sidebar.store";
 import { navItems } from "./navItems";
+import { useNotificationsStore } from "../../../store/notifications.store";
+import Link from "next/link";
 
 export default function Topbar(): JSX.Element {
     const router = useRouter();
     const { activeTabName } = useSidebarStore();
+
+
+    const { IsAnyNewNotification } = useNotificationsStore();
 
     const activeItem = navItems.find((item) => item.name === activeTabName) ?? navItems[0];
 
@@ -80,9 +85,10 @@ export default function Topbar(): JSX.Element {
             <div className="flex items-center gap-2.5">
 
                 {/* Notification Button */}
-                <button
-                    title="Notifications"
-                    className="
+                <Link href={'/notifications'}>
+                    <button
+                        title="Notifications"
+                        className="
                     flex
                     items-center
                     justify-center
@@ -94,10 +100,15 @@ export default function Topbar(): JSX.Element {
 
                     hover:bg-neutral-100
                     transition-colors
+                    cursor-pointer
                 "
-                >
-                    <Bell size={17} />
-                </button>
+                    >
+                        <Bell size={17} />
+                        {IsAnyNewNotification && (
+                            <span>New</span>
+                        )}
+                    </button>
+                </Link>
 
                 {/* Divider */}
                 <div className="w-px h-4 bg-[#e0ddd6]" />
