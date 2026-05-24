@@ -38,6 +38,7 @@ const AnswerSectionSchema = z.object({
 });
 
 const GeneratedAssignmentSchema = z.object({
+  assignmentName: z.string(),
   schoolName: z.string().default("Unknown"),
 
   subject: z.string().default("General"),
