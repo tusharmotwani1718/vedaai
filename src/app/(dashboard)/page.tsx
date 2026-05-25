@@ -8,7 +8,7 @@ export default function Home() {
         alt="Logo"
         width={200}
         height={200}
-        className="mb-4"
+        className="mb-4 h-auto w-auto min-h-40 min-w-40"
       />
       <h1 className="text-3xl font-bold">
         Welcome to the AI Assignment Generator
