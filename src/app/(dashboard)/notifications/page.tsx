@@ -1,5 +1,5 @@
 import React from 'react';
-import { NotificationsModel } from '../../../models/notifications.model';
+import { NotificationsModel } from '../../../../models/notifications.model';
 import NotificationsList from '@/_components/notifications/NotificationsList';
 import { Suspense } from 'react';
 import { Loader } from '@/_components/utils/loader';
