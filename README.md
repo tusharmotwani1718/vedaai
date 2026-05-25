@@ -66,16 +66,22 @@ h. uploads -> files uploaded for assignment inputs
 # Architecture and Workflow: 
 User submits assignment request
         ↓
-BullMQ Queue
+BullMQ Queue (Redis)
         ↓
-AI generates assignment JSON
+Worker processes job
         ↓
-Store assignment in DB
+AI Agent generates assignment JSON
+        ↓
+Store assignment in MongoDB
         ↓
 Generate PDF using Puppeteer
         ↓
 Upload PDF
         ↓
 Store PDF URL
+        ↓
+Publish completion event via Redis Pub/Sub
+        ↓
+Socket.IO notifies client in real time
         ↓
 Return assignment + downloadable PDF
