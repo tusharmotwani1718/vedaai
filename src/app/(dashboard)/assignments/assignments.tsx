@@ -85,7 +85,7 @@ function AssignmentCard({
             case 'completed':
                 return { bg: 'bg-emerald-500', label: 'Completed' };
             case 'failed':
-                return { bg: 'bg-rose-500', label: 'Overdue' };
+                return { bg: 'bg-rose-500', label: 'Failed' };
             default:
                 return { bg: 'bg-amber-500', label: 'Pending' };
         }
@@ -195,7 +195,7 @@ function Assignments() {
     }
 
     return (
-        <div className='flex flex-wrap gap-4 items-center justify-center my-4'>
+        <div className='flex flex-wrap gap-4 items-center justify-center'>
             {
                 assignments.map((assignment) => {
                     return (

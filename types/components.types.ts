@@ -4,6 +4,7 @@ export interface SidebarItem  {
     name: string;
     href: string;
     icon: JSX.Element;
+    text?: string;
 }
 
 
