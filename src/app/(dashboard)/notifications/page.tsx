@@ -8,6 +8,11 @@ async function page() {
 
     const notifications = await NotificationsModel.find({}).lean().sort({ createdAt: -1 });
 
+    notifications.map((notification) => (
+        notification._id = String(notification._id),
+        notification.assignmentId = String(notification.assignmentId)
+    ))
+
 
 
     return (
