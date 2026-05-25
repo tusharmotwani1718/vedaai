@@ -123,8 +123,8 @@ export default function AssignmentForm() {
       return;
     }
 
-    if (file.type !== "text/plain") {
-      toast.error("Only .txt files are allowed.");
+    if (file.type !== "text/plain" && file.type !== "application/pdf") {
+      toast.error("Only .txt and .pdf files are allowed.");
       return;
     }
 
@@ -369,7 +369,7 @@ export default function AssignmentForm() {
             type="file"
             ref={fileInputRef}
             className="hidden"
-            accept=".txt"
+            accept=".txt,.pdf"
             onChange={(e) =>
               e.target.files?.[0] &&
               handleFileSelected(
@@ -391,7 +391,7 @@ export default function AssignmentForm() {
               </h3>
 
               <p className="text-[#8B93A1] text-xs font-bold tracking-wider mt-1.5 uppercase">
-                TXT file upto 1MB
+                TXT or PDF file upto 1MB
               </p>
 
               <button
@@ -461,7 +461,7 @@ export default function AssignmentForm() {
         </div>
 
         <p className="text-[#8B93A1] text-xs sm:text-sm text-center mt-3 font-medium">
-          Upload txt files only (Optional)
+          Upload txt or pdf files (Optional)
         </p>
 
         {/* Due Date */}
