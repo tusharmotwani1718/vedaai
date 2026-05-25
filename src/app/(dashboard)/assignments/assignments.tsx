@@ -94,7 +94,7 @@ function AssignmentCard({
     const statusTheme = getStatusIndicator();
 
     return (
-        <div className="w-full md:min-w-137.5 bg-white rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_45px_rgba(0,0,0,0.06)] border border-gray-100/10 p-7 pb-8 px-8 flex flex-col justify-between transition-all duration-300 min-h-37">
+        <div className={`w-full md:min-w-137.5 bg-white rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:shadow-[0_12px_45px_rgba(0,0,0,0.06)] border border-gray-100/10 p-7 pb-8 px-8 flex flex-col justify-between transition-all duration-300 min-h-37 ${status == "pending" ? "cursor-not-allowed opacity-55 bg-gray-300 pointer-events-none" : ""}`}>
             {/* Top row: Title and Menu */}
             <div className="flex items-start justify-between">
                 <div className="flex flex-col">
@@ -115,7 +115,7 @@ function AssignmentCard({
                         minWidth: "140px"
                     }
                 }}>
-                    <button className="text-gray-400 hover:text-gray-700 hover:bg-gray-50 p-1.5 rounded-full transition-colors flex items-center justify-center cursor-pointer">
+                    <button className="text-gray-400 hover:text-gray-700 hover:bg-gray-50 p-1.5 rounded-full transition-colors flex items-center justify-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-50" disabled={status == "pending"}>
                         <EllipsisVertical size={20} />
                     </button>
                 </Dropdown>
@@ -126,7 +126,7 @@ function AssignmentCard({
                 {/* Right: Due Date */}
                 <p className="text-[13.5px] font-semibold text-gray-900 font-sans tracking-tight">
                     {"Due : "}
-                    <span className="text-gray-300 font-normal ml-0.5">
+                    <span className="text-gray-500 font-normal ml-0.5">
                         {formatToDDMMYYYY(dueDate)}
                     </span>
                 </p>
