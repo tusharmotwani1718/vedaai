@@ -11,7 +11,7 @@ export default function Topbar(): JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { IsAnyNewNotification } = useNotificationsStore();
+  const { hasNewNotification } = useNotificationsStore();
 
   // derive active item directly from pathname
   const activeItem =
@@ -101,7 +101,7 @@ export default function Topbar(): JSX.Element {
           >
             <Bell size={18} />
 
-            {IsAnyNewNotification && (
+            {hasNewNotification && (
               <span
                 className="
                   absolute
@@ -110,7 +110,7 @@ export default function Topbar(): JSX.Element {
                   h-2
                   w-2
                   rounded-full
-                  bg-blue-500
+                  bg-red-500
                 "
               />
             )}

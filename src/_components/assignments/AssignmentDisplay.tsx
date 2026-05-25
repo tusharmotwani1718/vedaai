@@ -80,7 +80,7 @@ function AssignmentDisplay({
                 {/* 1. Header Centered Block */}
                 <div className="text-center space-y-1.5 mb-8 print:mb-6">
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-950 print:text-black leading-tight">
-                        {schoolName.charAt(0).toUpperCase() + schoolName.slice(1).toLowerCase() || "Unknown"}
+                        {schoolName.toUpperCase() || "Unknown"}
                     </h1>
                     <p className="text-lg md:text-xl font-bold text-gray-900 print:text-black">
                         Subject: {subject.charAt(0).toUpperCase() + subject.slice(1).toLowerCase() || "Unknown"}

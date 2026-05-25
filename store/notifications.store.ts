@@ -1,13 +1,36 @@
 import { create } from "zustand";
-
+import {
+  persist,
+  createJSONStorage,
+} from "zustand/middleware";
 
 interface NotificationStore {
-    IsAnyNewNotification: boolean;
-    setNewNotification: () => void
+  hasNewNotification: boolean;
+
+  setHasNewNotification: (
+    value: boolean
+  ) => void;
 }
 
-export const useNotificationsStore = create<NotificationStore>((set) => ({
-    IsAnyNewNotification: false,
+export const useNotificationsStore =
+  create<NotificationStore>()(
+    persist(
+      (set) => ({
+        hasNewNotification: false,
 
-    setNewNotification: () => set((state) => ({ IsAnyNewNotification: !state.IsAnyNewNotification }))
-}))
+        setHasNewNotification: (
+          value: boolean
+        ) =>
+          set({
+            hasNewNotification: value,
+          }),
+      }),
+      {
+        name: "notifications-store",
+
+        storage: createJSONStorage(
+          () => localStorage
+        ),
+      }
+    )
+  );

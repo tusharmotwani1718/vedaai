@@ -14,7 +14,7 @@ import { useNotificationsStore } from "../../../store/notifications.store";
 export default function SocketProvider() {
 
     const { updateStatus } = useAssignmentStore();
-    const { setNewNotification } = useNotificationsStore();
+    const { setHasNewNotification } = useNotificationsStore();
 
     useEffect(() => {
 
@@ -110,7 +110,7 @@ export default function SocketProvider() {
                     data
                 );
 
-                setNewNotification();
+                setHasNewNotification(true);
 
             }
         )
@@ -126,8 +126,7 @@ export default function SocketProvider() {
                     data
                 );
 
-                setNewNotification();
-
+                setHasNewNotification(true);
             }
         )
 

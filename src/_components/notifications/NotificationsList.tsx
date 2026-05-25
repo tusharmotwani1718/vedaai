@@ -11,7 +11,7 @@ function NotificationsList({
     notifications: NotificationType[];
 }) {
 
-    const { setNewNotification, IsAnyNewNotification } = useNotificationsStore();
+    const { hasNewNotification, setHasNewNotification } = useNotificationsStore();
 
     if (!notifications.length) {
         return (
@@ -23,9 +23,10 @@ function NotificationsList({
     }
 
     useEffect(() => {
-        setNewNotification();
-        // console.log(IsAnyNewNotification);
-    }, []);
+        if(hasNewNotification) {
+            setHasNewNotification(false);
+        }
+    }, [hasNewNotification]);
 
     return (
         <div className="flex flex-col gap-3 w-full max-w-2xl mx-auto p-4">
