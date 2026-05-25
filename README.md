@@ -60,3 +60,21 @@ e. lib/db -> stores database connection and api utils
 f. store -> store zustand stores
 g. types -> stores types
 h. uploads -> files uploaded for assignment inputs
+
+
+# Architecture and Workflow: 
+User submits assignment request
+        ↓
+BullMQ Queue
+        ↓
+AI generates assignment JSON
+        ↓
+Store assignment in DB
+        ↓
+Generate PDF using Puppeteer
+        ↓
+Upload PDF
+        ↓
+Store PDF URL
+        ↓
+Return assignment + downloadable PDF

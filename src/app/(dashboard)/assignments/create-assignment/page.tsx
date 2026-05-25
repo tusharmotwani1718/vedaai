@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import AssignmentForm from "../../../_components/assignments/AssignmentForm"
+import AssignmentForm from "../../../../_components/assignments/AssignmentForm"
 
 function page() {
 

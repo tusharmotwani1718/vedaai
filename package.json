@@ -21,6 +21,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "handlebars": "^4.7.9",
+    "html2pdf.js": "^0.14.0",
     "ioredis": "^5.10.1",
     "lucide-react": "^1.16.0",
     "mongoose": "^9.6.2",

@@ -2,9 +2,9 @@
 
 import React, { useEffect } from 'react';
 import { EllipsisVertical, Trash2, Eye, Sparkles, Plus } from 'lucide-react';
-import { useAssignmentStore } from '../../../store/assignments.store';
-import { convertDatetoString } from '../../../utils/functions/convertDatetoString';
-import { Loader } from "../../_components/utils/loader";
+import { useAssignmentStore } from '../../../../store/assignments.store';
+import { convertDatetoString } from '../../../../utils/functions/convertDatetoString';
+import { Loader } from "../../../_components/utils/loader";
 import { Dropdown, Space } from 'antd';
 import Link from 'next/link';
 import Image from "next/image"
@@ -110,7 +110,11 @@ function AssignmentCard({
                     </div>
                 </div>
 
-                <Dropdown menu={{ items }} trigger={['click']} overlayStyle={{ minWidth: '160px' }}>
+                <Dropdown menu={{ items }} trigger={['click']} styles={{
+                    root: {
+                        minWidth: "140px"
+                    }
+                }}>
                     <button className="text-gray-400 hover:text-gray-700 hover:bg-gray-50 p-1.5 rounded-full transition-colors flex items-center justify-center cursor-pointer">
                         <EllipsisVertical size={20} />
                     </button>
