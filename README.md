@@ -18,7 +18,7 @@ The app would be available at http://localhost:3000
 
 
 View the complete guide to start the app and demo video here:
-https://youtu.be/x883KMyerEI
+https://youtu.be/BSFxPiRx05A
 
 
 
