@@ -48,6 +48,15 @@ export const POST = asyncHandler(async function (req: Request): Promise<NextResp
 
     await dbConnect();
 
+    const assignments = await AssignmentInputModel.find().sort({ createdAt: -1 });
+
+    if(assignments && assignments.length >= 10) {
+        throw new ApiError(
+            400,
+            "Maximum number of assignments reached. Please try again later or contact the developer."
+        )
+    }
+
 
     const newAssignment: AssignmentInputStorage = await AssignmentInputModel.create({
         assignmentName,
