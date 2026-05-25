@@ -32,6 +32,7 @@ Approach:
 5. Socket.io -> Realtime communication (Client - Server)
 6. Open AI SDK -> LLM Integration
 7. Redis/Pub-Sub -> (Server - Server) Realtime communication
+8. Puppeteer -> PDF generation
 
 
 # Approach:
