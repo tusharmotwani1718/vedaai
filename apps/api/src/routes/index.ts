@@ -1,0 +1,11 @@
+import { Router } from 'express';
+
+import { healthRouter } from './health.route';
+
+/**
+ * Every API route is mounted here under the `/api` prefix by `createApp`.
+ * Feature routers get added to this list as the app grows.
+ */
+export const apiRouter: Router = Router();
+
+apiRouter.use(healthRouter);
