@@ -26,6 +26,6 @@ Thumbs.db
 
 # Agent scratch output (not part of the project)
 claude-outputs/
-specs/
+# specs/
 project-details/
 no-push/
