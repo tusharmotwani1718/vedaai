@@ -7,14 +7,14 @@
  *
  *  1. Llm*Extraction  — what the LLM is asked to return.
  *     It only ever sees OCR text + block ids. It NEVER emits
- *     coordinates, confidence scores, or resolved ids. If you
+ *     coordinates, confidence scores, or resolved ids. If we
  *     add a field here that requires geometry or cross-referencing,
  *     the model will hallucinate it.
  *
  *  2. The stored type (QuestionPaper / AnswerSheet, etc.)
  *     — produced by YOUR code after taking the Llm* output,
  *     deriving regions from OCR block boxes, running validators,
- *     and computing confidence. This is what you persist and
+ *     and computing confidence. This is what we persist and
  *     what the frontend renders.
  *
  * Never let a coordinate or a confidence score originate on the
@@ -199,3 +199,83 @@ export interface QuestionPaper {
   uncertainties: string[];
 }
 
+
+
+
+
+
+
+// input types:
+// ============================================================
+// Input types (trimmed OCR block, what we keep from Mistral)
+// ============================================================
+
+
+/** Raw block straight from OCR, before we assign an id. */
+export interface RawBlock {
+  content: string;
+  type: string;
+  box: { topLeftX: number; topLeftY: number; bottomRightX: number; bottomRightY: number };
+}
+
+export interface RawPage {
+  index: number;
+  dimensions: { width: number; height: number; dpi?: number };
+  blocks: RawBlock[];
+}
+
+// ============================================================
+// What the LLM receives — id + type + content ONLY. No geometry.
+// ============================================================
+
+export interface InventoryBlock {
+  id: string; // "p0-b5"
+  type: string;
+  content: string;
+}
+
+export interface InventoryPage {
+  page: number; // human-facing 1-based
+  blocks: InventoryBlock[];
+}
+
+/** id -> geometry, kept in your code. Enrichment uses this to derive regions later. */
+export interface BlockGeometry {
+  page: number;
+  pageWidth: number;
+  pageHeight: number;
+  box: RawBlock["box"];
+}
+
+// ============================================================
+// Build both from raw OCR pages
+// ============================================================
+
+export function buildBlockInventory(pages: RawPage[]): {
+  inventory: InventoryPage[];
+  geometry: Map<string, BlockGeometry>;
+} {
+  const geometry = new Map<string, BlockGeometry>();
+
+  const inventory: InventoryPage[] = pages.map((page) => ({
+    page: page.index + 1,
+    blocks: page.blocks.map((block, b) => {
+      const id = `p${page.index}-b${b}`; // deterministic, matches raw indices
+
+      geometry.set(id, {
+        page: page.index,
+        pageWidth: page.dimensions.width,
+        pageHeight: page.dimensions.height,
+        box: block.box,
+      });
+
+      return {
+        id,
+        type: block.type || "text",
+        content: block.content,
+      };
+    }),
+  }));
+
+  return { inventory, geometry };
+}

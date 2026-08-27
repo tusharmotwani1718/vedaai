@@ -11,3 +11,4 @@ export type {
   Response,
   ErrorResponse,
 } from "./types/response.types";
+export * from "./types/ocr.types"

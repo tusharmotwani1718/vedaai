@@ -1,6 +1,7 @@
-import type { ErrorResponse, Response } from '@vedaai/shared';
+import { buildBlockInventory, type ErrorResponse, type Response, type RawBlock, type RawPage } from '@vedaai/shared';
 import { Mistral } from '@mistralai/mistralai';
 import fs from 'fs';
+import type { OCRPageObject } from "@mistralai/mistralai/models/components";
 
 type OcrGenerationProps =
   | {
@@ -16,16 +17,79 @@ const apiKey = process.env.MISTRAL_API_KEY;
 
 const client = new Mistral({ apiKey: apiKey });
 
+// <----------------------------------------------------------------------------->
+// Block types that actually carry content + geometry (everything except the Unknown catch-all).
+const KNOWN_BLOCK_TYPES = new Set([
+  "text", "title", "list", "table", "image", "footer",
+  "header", "caption", "code", "equation", "aside_text",
+  "references", "signature",
+]);
+ 
+// A block guaranteed to have content + coordinates. Derived from the SDK union
+// by excluding the Unknown<"type"> member.
+type ContentBlock = {
+  type: string;
+  content: string;
+  topLeftX: number;
+  topLeftY: number;
+  bottomRightX: number;
+  bottomRightY: number;
+};
+ 
+/** Narrows a raw union block to one that has content + geometry, or null for the Unknown catch-all. */
+function asContentBlock(block: unknown): ContentBlock | null {
+  if (
+    block &&
+    typeof block === "object" &&
+    "type" in block &&
+    typeof (block as any).type === "string" &&
+    KNOWN_BLOCK_TYPES.has((block as any).type) &&
+    "content" in block &&
+    "topLeftX" in block
+  ) {
+    return block as ContentBlock;
+  }
+  return null;
+}
+ 
+
+ 
+function toRawPages(pages: OCRPageObject[]): RawPage[] {
+  return pages.map((page) => ({
+    index: page.index,
+    dimensions: {
+      width: page.dimensions?.width ?? 0,
+      height: page.dimensions?.height ?? 0,
+      dpi: page.dimensions?.dpi ?? undefined,
+    },
+    blocks: (page.blocks ?? []).flatMap((raw) => {
+      const b = asContentBlock(raw);
+      if (!b) return []; // flatMap + [] = drop, no nulls in the result
+      return [{
+        type: b.type,
+        content: b.content,
+        box: {
+          topLeftX: b.topLeftX,
+          topLeftY: b.topLeftY,
+          bottomRightX: b.bottomRightX,
+          bottomRightY: b.bottomRightY,
+        },
+      }];
+    }),
+  }));
+}
+// <--------------------------------------------------------------------------------->
+
+
 async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorResponse> {
   try {
-
     const input = props;
     const { filePath, fileUrl } = input;
 
-    let pdfBuffer : any;
-    let base64Pdf : any;
+    let pdfBuffer: any;
+    let base64Pdf: any;
 
-    if(!filePath || !fileUrl) {
+    if (!filePath || !fileUrl) {
       return {
         success: false,
         message: 'No file path or url provided',
@@ -36,7 +100,7 @@ async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorRe
       };
     }
 
-    if(filePath) {
+    if (filePath) {
       pdfBuffer = fs.readFileSync(filePath);
       base64Pdf = pdfBuffer.toString('base64');
     }
@@ -52,24 +116,21 @@ async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorRe
       // extractHeader: False, // default is False
       // extractFooter: False, // default is False
       includeImageBase64: true,
-      includeBlocks: true
+      includeBlocks: true,
     });
 
     const pages = ocrResponse.pages;
 
-    console.log('pages: 📖📖📖...');
-    console.log(JSON.stringify(pages, null, 2));
-
-    for (const page of pages) {
-      console.log(`page ${page.index + 1} 📃📃📃...`);
-      console.log(page.markdown);
-    }
+    let pagesToReturn : RawPage[] = toRawPages(pages);
 
     return {
-        success: true,
-        message: 'Extraction successful',
-        data: ocrResponse
-    }
+      success: true,
+      message: 'Extraction successful',
+      data: {
+        pages: pagesToReturn,
+        usageInfo: ocrResponse?.usageInfo
+      },
+    };
   } catch (error) {
     return {
       success: false,
@@ -78,3 +139,9 @@ async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorRe
     };
   }
 }
+
+// async function transformOcrOutput(pages: RawPage[]) {
+//   try {
+//     const { inventory, geometry } = buildBlockInventory(pages);
+//   } catch (error) {}
+// }
