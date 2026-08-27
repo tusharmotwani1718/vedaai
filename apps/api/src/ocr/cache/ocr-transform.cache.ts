@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto';
-import type { InventoryPage, LlmQuestionPaperExtraction } from '@vedaai/shared';
+import type {
+  InventoryPage,
+  LlmAnswerSheetExtraction,
+  LlmQuestionPaperExtraction,
+} from '@vedaai/shared';
 
 import { MemoryCache, type CacheStats } from '../../lib/memory-cache';
 
@@ -17,27 +21,44 @@ import { MemoryCache, type CacheStats } from '../../lib/memory-cache';
  * a miss. Nothing has to be explicitly evicted for correctness.
  */
 
+/** Which prompt + schema a transform was produced with. */
+export type TransformDocumentType = 'questionPaper' | 'answerSheet';
+
 /**
- * Bumped whenever the prompt or the shape of the extraction changes.
+ * Bumped whenever a prompt or the shape of an extraction changes.
  *
  * It is folded into the fingerprint so that a prompt edit cannot serve stale
  * JSON produced by the previous prompt against identical OCR text.
  */
 export const EXTRACTION_VERSION = '1';
 
-const transformCache = new MemoryCache<LlmQuestionPaperExtraction>(50);
+// Two documents, two prompts, two schemas — so two stores. Keeping them apart
+// is what makes the accessors type-safe; the document type is also folded into
+// the fingerprint so a key can never be read from the wrong store by accident.
+const questionPaperCache = new MemoryCache<LlmQuestionPaperExtraction>(50);
+const answerSheetCache = new MemoryCache<LlmAnswerSheetExtraction>(50);
 
 /**
- * Fingerprints exactly what the LLM is shown — block ids, types and content,
- * in order — plus the extraction version.
+ * Fingerprints exactly what the LLM is shown — block ids, types and content, in
+ * order — plus the model, the extraction version, and which document type is
+ * being transformed.
+ *
+ * The document type matters: the same OCR text run through the question-paper
+ * prompt and the answer-sheet prompt yields two completely different JSON
+ * shapes. Without it in the key, those two transforms collide.
  *
  * Geometry is intentionally excluded: coordinates never reach the LLM, so they
  * cannot influence the transformed JSON and must not influence the cache key.
  */
-export function fingerprintOcr(inventory: InventoryPage[], model: string): string {
+export function fingerprintOcr(
+  inventory: InventoryPage[],
+  model: string,
+  documentType: TransformDocumentType,
+): string {
   const canonical = JSON.stringify({
     v: EXTRACTION_VERSION,
     model,
+    documentType,
     pages: inventory.map((page) => ({
       page: page.page,
       blocks: page.blocks.map((block) => [block.id, block.type, block.content]),
@@ -47,21 +68,38 @@ export function fingerprintOcr(inventory: InventoryPage[], model: string): strin
   return createHash('sha256').update(canonical).digest('hex');
 }
 
-export function getCachedTransform(fingerprint: string): LlmQuestionPaperExtraction | undefined {
-  return transformCache.get(fingerprint);
+export function getCachedQuestionPaper(
+  fingerprint: string,
+): LlmQuestionPaperExtraction | undefined {
+  return questionPaperCache.get(fingerprint);
 }
 
-export function setCachedTransform(
+export function setCachedQuestionPaper(
   fingerprint: string,
   extraction: LlmQuestionPaperExtraction,
 ): void {
-  transformCache.set(fingerprint, extraction);
+  questionPaperCache.set(fingerprint, extraction);
+}
+
+export function getCachedAnswerSheet(fingerprint: string): LlmAnswerSheetExtraction | undefined {
+  return answerSheetCache.get(fingerprint);
+}
+
+export function setCachedAnswerSheet(
+  fingerprint: string,
+  extraction: LlmAnswerSheetExtraction,
+): void {
+  answerSheetCache.set(fingerprint, extraction);
 }
 
 export function clearTransformCache(): void {
-  transformCache.clear();
+  questionPaperCache.clear();
+  answerSheetCache.clear();
 }
 
-export function transformCacheStats(): CacheStats {
-  return transformCache.stats;
+export function transformCacheStats(): Record<TransformDocumentType, CacheStats> {
+  return {
+    questionPaper: questionPaperCache.stats,
+    answerSheet: answerSheetCache.stats,
+  };
 }

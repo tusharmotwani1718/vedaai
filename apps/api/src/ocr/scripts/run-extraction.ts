@@ -17,7 +17,7 @@ const DEFAULT_PDF = path.join(REPO_ROOT, 'public/pdf/rtu-paper.pdf');
 const filePath = process.argv[2] ?? DEFAULT_PDF;
 
 console.log(`[extraction] OCR on ${filePath}`);
-const ocr = await extractOcr({ filePath });
+const ocr = await extractOcr({ filePath, documentType: 'questionPaper' });
 
 if (!ocr.success) {
   console.error('[extraction] OCR failed:', ocr.message, ocr.error);

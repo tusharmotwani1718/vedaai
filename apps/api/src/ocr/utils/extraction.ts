@@ -6,18 +6,27 @@ import {
   type BlockGeometry,
   type ErrorResponse,
   type InventoryPage,
+  type LlmAnswerSheetExtraction,
   type LlmQuestionPaperExtraction,
   type RawPage,
   type Response,
+  LlmAnswerSheetExtractionSchema,
   LlmQuestionPaperExtractionSchema,
 } from '@vedaai/shared';
 
 import {
   fingerprintOcr,
-  getCachedTransform,
-  setCachedTransform,
+  getCachedAnswerSheet,
+  getCachedQuestionPaper,
+  setCachedAnswerSheet,
+  setCachedQuestionPaper,
+  type TransformDocumentType,
 } from '../cache/ocr-transform.cache';
-import { mistraAIOcrTransformPrompt } from '../lib/constants';
+import { mistraAIAnswerSheetTransformPrompt, mistraAIOcrTransformPrompt } from '../lib/constants';
+import {
+  validateAnswerExtraction,
+  type AnswerValidationReport,
+} from '../lib/validators/validate.answer-extraction';
 import {
   validateExtraction,
   type ValidationReport,
@@ -30,15 +39,23 @@ export type OcrGenerationProps =
   | {
       fileUrl: string; // for cloud docs
       filePath?: never; // for local docs
+      documentType: TransformDocumentType;
     }
   | {
       fileUrl?: never;
       filePath: string;
+      documentType: TransformDocumentType;
     };
 
 /** Shape of `Response.data` returned by {@link extractOcr} on success. */
 export interface OcrExtractionData {
   pages: RawPage[];
+  /**
+   * Echoed back from the request. OCR itself is identical for both document
+   * types — the distinction only matters at the transform step — so carrying it
+   * here is what lets a caller hand the result to the right transform.
+   */
+  documentType: TransformDocumentType;
   usageInfo?: unknown;
 }
 
@@ -175,7 +192,7 @@ export function buildBlockInventory(pages: RawPage[]): {
 /** Runs Mistral OCR over a local file or a publicly reachable URL. */
 export async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorResponse> {
   try {
-    const { filePath, fileUrl } = props;
+    const { filePath, fileUrl, documentType } = props;
 
     if (!filePath && !fileUrl) {
       return {
@@ -209,6 +226,7 @@ export async function extractOcr(props: OcrGenerationProps): Promise<Response | 
 
     const data: OcrExtractionData = {
       pages: toRawPages(ocrResponse.pages),
+      documentType,
       usageInfo: ocrResponse?.usageInfo,
     };
 
@@ -276,6 +294,30 @@ async function callTransformLlm(inventory: InventoryPage[]): Promise<LlmQuestion
   return LlmQuestionPaperExtractionSchema.parse(candidate);
 }
 
+async function callTransformLlmForAnswerSheet(
+  inventory: InventoryPage[],
+): Promise<LlmAnswerSheetExtraction> {
+  const response = await getClient().chat.parse({
+    model: TRANSFORM_MODEL,
+    messages: [
+      { role: 'system', content: mistraAIAnswerSheetTransformPrompt },
+      { role: 'user', content: `Here is the OCR output: ${JSON.stringify(inventory)}` },
+    ],
+    responseFormat: LlmAnswerSheetExtractionSchema,
+  });
+
+  const message = response.choices?.[0]?.message;
+  if (!message) {
+    throw new Error('Transform LLM returned no choices');
+  }
+
+  // The SDK hands back `parsed` when the response satisfied the schema. Run it
+  // through zod regardless, so the return type is guaranteed rather than
+  // asserted and a malformed response fails loudly right here.
+  const candidate = message.parsed ?? JSON.parse(messageContentToString(message.content));
+  return LlmAnswerSheetExtractionSchema.parse(candidate);
+}
+
 /**
  * Turns raw OCR pages into the structured question paper.
  *
@@ -287,9 +329,9 @@ async function callTransformLlm(inventory: InventoryPage[]): Promise<LlmQuestion
  */
 export async function transformOcrOutput(pages: RawPage[]): Promise<QuestionPaperTransformResult> {
   const { inventory, geometry } = buildBlockInventory(pages);
-  const fingerprint = fingerprintOcr(inventory, TRANSFORM_MODEL);
+  const fingerprint = fingerprintOcr(inventory, TRANSFORM_MODEL, 'questionPaper');
 
-  const cached = getCachedTransform(fingerprint);
+  const cached = getCachedQuestionPaper(fingerprint);
   const cacheHit = cached !== undefined;
 
   // Clone on the way out: validation mutates the extraction in place, and the
@@ -301,7 +343,59 @@ export async function transformOcrOutput(pages: RawPage[]): Promise<QuestionPape
   const validation = validateExtraction(extraction, inventory);
 
   if (!cacheHit) {
-    setCachedTransform(fingerprint, structuredClone(extraction));
+    setCachedQuestionPaper(fingerprint, structuredClone(extraction));
+  }
+
+  return { extraction, inventory, geometry, validation, fingerprint, cacheHit };
+}
+
+export interface AnswerSheetTransformResult {
+  /** The student's attempts, after page normalization and offset recovery. */
+  extraction: LlmAnswerSheetExtraction;
+  /** Exactly what the LLM was shown. */
+  inventory: InventoryPage[];
+  /** Block id -> coordinates. Stays in this process; never sent to the LLM. */
+  geometry: Map<string, BlockGeometry>;
+  validation: AnswerValidationReport;
+  /** sha256 of the OCR text this transform was derived from. */
+  fingerprint: string;
+  cacheHit: boolean;
+}
+
+/**
+ * Turns raw OCR pages of a student's answer sheet into structured attempts.
+ *
+ * The LLM only records what the student wrote — it is never shown the question
+ * paper and never infers question ids. Validation here is purely about OCR
+ * consistency (provenance, offsets, coverage); mapping a written label like
+ * "Q.4(b)" onto a questionId is a separate step.
+ *
+ * Cached on the OCR content under its own key, so an answer sheet and a
+ * question paper that happen to OCR identically cannot serve each other's JSON.
+ *
+ * Throws on transport or schema failure; the route layer maps that to a response.
+ */
+export async function transformOcrOutputForAnswerSheet(
+  pages: RawPage[],
+): Promise<AnswerSheetTransformResult> {
+  const { inventory, geometry } = buildBlockInventory(pages);
+  const fingerprint = fingerprintOcr(inventory, TRANSFORM_MODEL, 'answerSheet');
+
+  const cached = getCachedAnswerSheet(fingerprint);
+  const cacheHit = cached !== undefined;
+
+  // Clone on the way out: validation mutates the extraction in place, and the
+  // cached copy must not drift with whatever a caller does to its result.
+  const extraction = cacheHit
+    ? structuredClone(cached)
+    : await callTransformLlmForAnswerSheet(inventory);
+
+  // Idempotent — a cached extraction is already normalized, so re-running this
+  // only rebuilds the report.
+  const validation = validateAnswerExtraction(extraction, inventory);
+
+  if (!cacheHit) {
+    setCachedAnswerSheet(fingerprint, structuredClone(extraction));
   }
 
   return { extraction, inventory, geometry, validation, fingerprint, cacheHit };
