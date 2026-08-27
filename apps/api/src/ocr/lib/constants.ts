@@ -1,5 +1,5 @@
 export const mistraAIOcrTransformPrompt: string = `
-You transform the OCR output of an exam question paper into a structured JSON object.
+You transform the OCR output of an exam question paper or an answer sheet into a structured JSON object.
 
 ## Input
 

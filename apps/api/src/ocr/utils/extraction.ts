@@ -1,20 +1,32 @@
-import {
-  type ErrorResponse,
-  type Response,
-  type RawBlock,
-  type RawPage,
-  type InventoryPage,
-  type BlockGeometry,
-  LlmQuestionPaperExtractionSchema,
-  LlmAnswerSheetExtractionSchema,
-} from '@vedaai/shared';
-import { Mistral } from '@mistralai/mistralai';
-import fs from 'fs';
-import path from 'path';
-import type { OCRPageObject } from '@mistralai/mistralai/models/components';
-import { mistraAIOcrTransformPrompt } from '../lib/constants';
+import fs from 'node:fs/promises';
 
-type OcrGenerationProps =
+import { Mistral } from '@mistralai/mistralai';
+import type { OCRPageObject } from '@mistralai/mistralai/models/components';
+import {
+  type BlockGeometry,
+  type ErrorResponse,
+  type InventoryPage,
+  type LlmQuestionPaperExtraction,
+  type RawPage,
+  type Response,
+  LlmQuestionPaperExtractionSchema,
+} from '@vedaai/shared';
+
+import {
+  fingerprintOcr,
+  getCachedTransform,
+  setCachedTransform,
+} from '../cache/ocr-transform.cache';
+import { mistraAIOcrTransformPrompt } from '../lib/constants';
+import {
+  validateExtraction,
+  type ValidationReport,
+} from '../lib/validators/validate.question-extraction';
+
+export const OCR_MODEL = 'mistral-ocr-latest';
+export const TRANSFORM_MODEL = 'mistral-large-latest';
+
+export type OcrGenerationProps =
   | {
       fileUrl: string; // for cloud docs
       filePath?: never; // for local docs
@@ -24,9 +36,30 @@ type OcrGenerationProps =
       filePath: string;
     };
 
-const apiKey = process.env.MISTRAL_API_KEY;
+/** Shape of `Response.data` returned by {@link extractOcr} on success. */
+export interface OcrExtractionData {
+  pages: RawPage[];
+  usageInfo?: unknown;
+}
 
-const client = new Mistral({ apiKey: apiKey });
+/**
+ * The SDK client is built on first use rather than at import time, so this
+ * module can be imported (by routes, by tests, by the type checker) in an
+ * environment that has no API key configured.
+ */
+let client: Mistral | null = null;
+
+function getClient(): Mistral {
+  if (client !== null) return client;
+
+  const apiKey = process.env.MISTRAL_API_KEY;
+  if (!apiKey) {
+    throw new Error('MISTRAL_API_KEY is not set — add it to apps/api/.env');
+  }
+
+  client = new Mistral({ apiKey });
+  return client;
+}
 
 // <----------------------------------------------------------------------------->
 // Block types that actually carry content + geometry (everything except the Unknown catch-all).
@@ -63,8 +96,8 @@ function asContentBlock(block: unknown): ContentBlock | null {
     block &&
     typeof block === 'object' &&
     'type' in block &&
-    typeof (block as any).type === 'string' &&
-    KNOWN_BLOCK_TYPES.has((block as any).type) &&
+    typeof (block as { type: unknown }).type === 'string' &&
+    KNOWN_BLOCK_TYPES.has((block as { type: string }).type) &&
     'content' in block &&
     'topLeftX' in block
   ) {
@@ -73,7 +106,7 @@ function asContentBlock(block: unknown): ContentBlock | null {
   return null;
 }
 
-function toRawPages(pages: OCRPageObject[]): RawPage[] {
+export function toRawPages(pages: OCRPageObject[]): RawPage[] {
   return pages.map((page) => ({
     index: page.index,
     dimensions: {
@@ -100,7 +133,16 @@ function toRawPages(pages: OCRPageObject[]): RawPage[] {
   }));
 }
 
-function buildBlockInventory(pages: RawPage[]): {
+/**
+ * Splits the OCR pages into the two things downstream code needs:
+ *
+ *  - `inventory` — id + type + content only. This is all the LLM ever sees.
+ *  - `geometry`  — id -> box, kept in this process and never sent anywhere.
+ *
+ * Block ids are `p<pageIndex>-b<blockIndex>` with both indices 0-based, so the
+ * same OCR output always produces the same ids.
+ */
+export function buildBlockInventory(pages: RawPage[]): {
   inventory: InventoryPage[];
   geometry: Map<string, BlockGeometry>;
 } {
@@ -130,13 +172,10 @@ function buildBlockInventory(pages: RawPage[]): {
 }
 // <--------------------------------------------------------------------------------->
 
-async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorResponse> {
+/** Runs Mistral OCR over a local file or a publicly reachable URL. */
+export async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorResponse> {
   try {
-    const input = props;
-    const { filePath, fileUrl } = input;
-
-    let pdfBuffer: any;
-    let base64Pdf: any;
+    const { filePath, fileUrl } = props;
 
     if (!filePath && !fileUrl) {
       return {
@@ -149,17 +188,17 @@ async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorRe
       };
     }
 
-    if (filePath) {
-      pdfBuffer = fs.readFileSync(filePath);
-      base64Pdf = pdfBuffer.toString('base64');
+    let documentUrl = fileUrl;
+    if (!documentUrl && filePath) {
+      const pdfBuffer = await fs.readFile(filePath);
+      documentUrl = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
     }
 
-    // cloud url:
-    const ocrResponse = await client.ocr.process({
-      model: 'mistral-ocr-latest',
+    const ocrResponse = await getClient().ocr.process({
+      model: OCR_MODEL,
       document: {
         type: 'document_url',
-        documentUrl: fileUrl ? fileUrl : `data:application/pdf;base64,${base64Pdf}`,
+        documentUrl: documentUrl as string,
       },
       tableFormat: 'html', // default is null
       // extractHeader: False, // default is False
@@ -168,21 +207,18 @@ async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorRe
       includeBlocks: true,
     });
 
-    const pages = ocrResponse.pages;
-
-    let pagesToReturn: RawPage[] = toRawPages(pages);
+    const data: OcrExtractionData = {
+      pages: toRawPages(ocrResponse.pages),
+      usageInfo: ocrResponse?.usageInfo,
+    };
 
     return {
       success: true,
       message: 'Extraction successful',
-      data: {
-        pages: pagesToReturn,
-        usageInfo: ocrResponse?.usageInfo,
-      },
+      data,
     };
   } catch (error) {
-    console.log('error in ocr extraction...');
-    console.log(error);
+    console.error('[ocr] extraction failed', error);
     return {
       success: false,
       message: 'Something went wrong',
@@ -191,43 +227,82 @@ async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorRe
   }
 }
 
-async function transformOcrOutput(pages: RawPage[]) {
-  try {
-    console.log(`transforming...🤖🤖🤖`);
-    const { inventory, geometry } = buildBlockInventory(pages);
-
-    const response = await client.chat.parse({
-      model: 'mistral-large-latest',
-      messages: [
-        { role: 'system', content: mistraAIOcrTransformPrompt },
-        { role: 'user', content: `Here is the OCR output: ${JSON.stringify(inventory)}` },
-      ],
-      responseFormat: LlmQuestionPaperExtractionSchema,
-    });
-
-    // console.log('response', response);
-    if (!response) return;
-
-    if (response.choices) {
-      console.log(`transformed...`);
-      console.log(response?.choices[0]?.message?.content);
-    }
-  } catch (error) {
-    console.error('error in transformOcrOutput');
-    console.log(error);
-  }
+export interface QuestionPaperTransformResult {
+  /** The structured paper, after page normalization and offset recovery. */
+  extraction: LlmQuestionPaperExtraction;
+  /** Exactly what the LLM was shown. */
+  inventory: InventoryPage[];
+  /** Block id -> coordinates. Stays in this process; never sent to the LLM. */
+  geometry: Map<string, BlockGeometry>;
+  validation: ValidationReport;
+  /** sha256 of the OCR text this transform was derived from. */
+  fingerprint: string;
+  cacheHit: boolean;
 }
 
-const res = await extractOcr({
-  filePath: path.resolve(import.meta.dirname, '../../../../..', 'public/pdf/rtu-paper.pdf'),
-});
+function messageContentToString(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((chunk) =>
+        chunk && typeof chunk === 'object' && 'text' in chunk
+          ? String((chunk as { text: unknown }).text)
+          : '',
+      )
+      .join('');
+  }
+  return '';
+}
 
-console.log('pages...');
-console.log(JSON.stringify(res?.data?.pages));
+async function callTransformLlm(inventory: InventoryPage[]): Promise<LlmQuestionPaperExtraction> {
+  const response = await getClient().chat.parse({
+    model: TRANSFORM_MODEL,
+    messages: [
+      { role: 'system', content: mistraAIOcrTransformPrompt },
+      { role: 'user', content: `Here is the OCR output: ${JSON.stringify(inventory)}` },
+    ],
+    responseFormat: LlmQuestionPaperExtractionSchema,
+  });
 
-if (res.success) {
-  const transformedJSON = await transformOcrOutput(res?.data?.pages);
+  const message = response.choices?.[0]?.message;
+  if (!message) {
+    throw new Error('Transform LLM returned no choices');
+  }
 
-  console.log('transformed...');
-  console.log(JSON.stringify(transformedJSON));
+  // The SDK hands back `parsed` when the response satisfied the schema. Run it
+  // through zod regardless, so the return type is guaranteed rather than
+  // asserted and a malformed response fails loudly right here.
+  const candidate = message.parsed ?? JSON.parse(messageContentToString(message.content));
+  return LlmQuestionPaperExtractionSchema.parse(candidate);
+}
+
+/**
+ * Turns raw OCR pages into the structured question paper.
+ *
+ * Cached on the OCR content, never on the source document — see
+ * `../cache/ocr-transform.cache.ts` for why. Both the cached and the freshly
+ * transformed path run through validation, so callers always get a report.
+ *
+ * Throws on transport or schema failure; the route layer maps that to a response.
+ */
+export async function transformOcrOutput(pages: RawPage[]): Promise<QuestionPaperTransformResult> {
+  const { inventory, geometry } = buildBlockInventory(pages);
+  const fingerprint = fingerprintOcr(inventory, TRANSFORM_MODEL);
+
+  const cached = getCachedTransform(fingerprint);
+  const cacheHit = cached !== undefined;
+
+  // Clone on the way out: validation mutates the extraction in place, and the
+  // cached copy must not drift with whatever a caller does to its result.
+  const extraction = cacheHit ? structuredClone(cached) : await callTransformLlm(inventory);
+
+  // Idempotent — a cached extraction is already normalized, so re-running this
+  // only rebuilds the report.
+  const validation = validateExtraction(extraction, inventory);
+
+  if (!cacheHit) {
+    setCachedTransform(fingerprint, structuredClone(extraction));
+  }
+
+  return { extraction, inventory, geometry, validation, fingerprint, cacheHit };
 }
