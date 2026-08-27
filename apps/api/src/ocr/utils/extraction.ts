@@ -23,6 +23,14 @@ import {
   type TransformDocumentType,
 } from '../cache/ocr-transform.cache';
 import { mistraAIAnswerSheetTransformPrompt, mistraAIOcrTransformPrompt } from '../lib/constants';
+import { deriveAttemptRegions, type AttemptRegion } from '../lib/regions/derive-regions';
+import {
+  buildPaperLabelIndex,
+  buildQuestionAnswerIndex,
+  resolveAnswerSheet,
+  type AnswerResolutionReport,
+  type QuestionAnswer,
+} from '../lib/resolution/resolve-attempts';
 import {
   validateAnswerExtraction,
   type AnswerValidationReport,
@@ -357,6 +365,11 @@ export interface AnswerSheetTransformResult {
   /** Block id -> coordinates. Stays in this process; never sent to the LLM. */
   geometry: Map<string, BlockGeometry>;
   validation: AnswerValidationReport;
+  /**
+   * One highlight band per attempt, keyed by the same attemptIds the validation
+   * report uses. This is what the answers pane draws over the page.
+   */
+  regions: AttemptRegion[];
   /** sha256 of the OCR text this transform was derived from. */
   fingerprint: string;
   cacheHit: boolean;
@@ -394,9 +407,55 @@ export async function transformOcrOutputForAnswerSheet(
   // only rebuilds the report.
   const validation = validateAnswerExtraction(extraction, inventory);
 
+  // Regions are derived after validation, which is what corrects the offsets
+  // the geometry is sliced by. Doing it earlier would highlight the model's
+  // guessed character positions instead of the recovered ones.
+  const { regions, issues } = deriveAttemptRegions(
+    extraction,
+    validation.sheetOrder,
+    inventory,
+    geometry,
+  );
+
+  // Region problems belong in the same list the UI already renders.
+  validation.issues.push(...issues);
+  validation.summary.hardFailures += issues.filter((i) => i.severity === 'error').length;
+  validation.summary.warnings += issues.filter((i) => i.severity === 'warning').length;
+
   if (!cacheHit) {
     setCachedAnswerSheet(fingerprint, structuredClone(extraction));
   }
 
-  return { extraction, inventory, geometry, validation, fingerprint, cacheHit };
+  return { extraction, inventory, geometry, validation, regions, fingerprint, cacheHit };
+}
+
+export interface AnswerMappingResult {
+  resolution: AnswerResolutionReport;
+  /**
+   * questionId -> the attempts and rectangles that answer it. This is what the
+   * screen needs: click a question, look it up here, draw `region.rects`.
+   */
+  byQuestionId: Map<string, QuestionAnswer>;
+}
+
+/**
+ * Joins a transformed answer sheet to a transformed question paper.
+ *
+ * Deliberately not folded into `transformOcrOutputForAnswerSheet`: that result
+ * is cached on OCR content alone, and resolution depends on the paper, which is
+ * not part of that key. Keeping it out here means a cached sheet is never
+ * served with a mapping built against a different paper.
+ */
+export function mapAnswersToQuestions(
+  answer: AnswerSheetTransformResult,
+  paper: LlmQuestionPaperExtraction,
+): AnswerMappingResult {
+  const resolution = resolveAnswerSheet(answer.extraction, answer.validation.sheetOrder, paper);
+  const byQuestionId = buildQuestionAnswerIndex(
+    resolution,
+    answer.regions,
+    buildPaperLabelIndex(paper),
+  );
+
+  return { resolution, byQuestionId };
 }
