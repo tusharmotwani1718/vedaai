@@ -38,6 +38,73 @@ function norm(s: string): string {
 }
 
 // ============================================================
+// LEVEL 0a — Page index normalization
+// ============================================================
+//
+// buildBlockInventory numbers the pages it hands the LLM from 1, while block
+// ids, RawPage.index and PageRect are all 0-based. Rather than trust the model
+// to have copied the right convention into TextOrigin.page, we recompute the
+// page from the block id — an id we generated ourselves, so it is
+// authoritative. Without this, every derived region is off by one page.
+
+const BLOCK_ID_PATTERN = /^p(\d+)-b\d+$/;
+
+/** The 0-based page index encoded in a block id, or null if it is malformed. */
+export function pageIndexFromBlockId(blockId: string): number | null {
+  const match = BLOCK_ID_PATTERN.exec(blockId);
+  if (match === null) return null;
+  return Number.parseInt(match[1]!, 10);
+}
+
+export interface PageNormalization {
+  questionId: string;
+  blockId: string;
+  ok: boolean;
+  /** The page the LLM claimed. */
+  from: number;
+  /** The page the block id implies (equal to `from` when the id is malformed). */
+  to: number;
+}
+
+/**
+ * Rewrites TextOrigin.page on every question and part to the 0-based page index
+ * implied by its block id. Mutates `extracted` in place, the same way
+ * recoverOffsets does, so every later check sees corrected values.
+ *
+ * A malformed block id is reported but left untouched — checkBlockExistence
+ * fails it anyway, and guessing a page here would only mask the real problem.
+ */
+export function normalizePageIndices(extracted: LlmQuestionPaperExtraction): PageNormalization[] {
+  const results: PageNormalization[] = [];
+
+  const apply = (questionId: string, origin: { page: number; blockId: string }): void => {
+    const page = pageIndexFromBlockId(origin.blockId);
+    if (page === null) {
+      results.push({
+        questionId,
+        blockId: origin.blockId,
+        ok: false,
+        from: origin.page,
+        to: origin.page,
+      });
+      return;
+    }
+    results.push({ questionId, blockId: origin.blockId, ok: true, from: origin.page, to: page });
+    origin.page = page;
+  };
+
+  for (const { questionId, q } of flattenQuestions(extracted)) {
+    apply(questionId, q.TextOrigin);
+    (q.parts ?? []).forEach((part, i) => {
+      apply(questionId + '.' + (part.label || String(i + 1)), part.TextOrigin);
+    });
+  }
+
+  return results;
+}
+
+
+// ============================================================
 // LEVEL 0 — Offset recovery --> charStart/charEnd match from inventory block with the llm transformed output block.
 // ============================================================
 //
@@ -209,16 +276,23 @@ export function checkStructure(
           : `declared ${s.totalQuestions}, got ${s.questions.length}`,
     });
 
-    // marks arithmetic against rawMarksExpression, if present
+    // Marks arithmetic against rawMarksExpression, if present.
+    //
+    // The multiplier is attemptCount, NOT totalQuestions: a section reading
+    // "Attempt any 5 of 7, 10 marks each" totals 50, not 70 — using
+    // totalQuestions made every optional section a false failure. Falling
+    // back to totalQuestions keeps compulsory sections right (there the two
+    // are equal) when the model omits attemptCount.
     if (s.marksPerQuestion != null && s.sectionTotal != null) {
-      const expected = s.marksPerQuestion * s.totalQuestions;
+      const countedQuestions = s.attemptCount > 0 ? s.attemptCount : s.totalQuestions;
+      const expected = s.marksPerQuestion * countedQuestions;
       out.push({
         scope: `section ${s.sectionId} marks`,
         ok: expected === s.sectionTotal,
         reason:
           expected === s.sectionTotal
             ? undefined
-            : `${s.marksPerQuestion}*${s.totalQuestions}=${expected}≠${s.sectionTotal}`,
+            : `${s.marksPerQuestion}*${countedQuestions}=${expected}≠${s.sectionTotal}`,
       });
     }
 
@@ -252,6 +326,7 @@ export function checkStructure(
 // ============================================================
 
 export interface ValidationReport {
+  pageNormalization: PageNormalization[];
   offsetRecovery: OffsetRecovery[];
   blockExistence: ReturnType<typeof checkBlockExistence>;
   reconstruction: ReconResult[];
@@ -263,7 +338,9 @@ export function validateExtraction(
   extracted: LlmQuestionPaperExtraction,
   inventory: InventoryPage[],
 ): ValidationReport {
-  // 1. recover offsets first — mutates extracted.TextOrigin to exact values where possible
+  // 1. normalize page indices first — every later step reads TextOrigin.page
+  const pageNormalization = normalizePageIndices(extracted);
+  // 2. recover offsets — mutates extracted.TextOrigin to exact values where possible
   const offsetRecovery = recoverOffsets(extracted, inventory);
   // 2. then the checks, which now see corrected offsets
   const blockExistence = checkBlockExistence(extracted, inventory);
@@ -276,10 +353,14 @@ export function validateExtraction(
     reconstruction.filter((r) => !r.ok).length +
     structure.filter((r) => !r.ok).length;
 
+  // A malformed block id is not counted here: checkBlockExistence already
+  // records it as a hard failure, and counting it twice would skew the summary.
   const warnings =
-    offsetRecovery.filter((r) => r.status === 'kept-model').length
+    offsetRecovery.filter((r) => r.status === 'kept-model').length +
+    pageNormalization.filter((r) => !r.ok).length;
 
   return {
+    pageNormalization,
     offsetRecovery,
     blockExistence,
     reconstruction,
