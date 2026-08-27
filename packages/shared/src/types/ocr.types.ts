@@ -212,7 +212,113 @@ export interface QuestionPaper {
 }
 
 
+// ============================================================
+// LLM extraction output — ANSWER SHEET
+// ============================================================
 
+export const LlmExtractedAttemptSchema = z.object({
+  /** Literally what the student wrote: "3", "Q.4(b)", "5 contd" — not resolved yet. */
+  claimedLabel: z.string(),
+  text: z.string(),
+  /** The marker token itself, e.g. "Q3", kept separate from the answer body. */
+  markerText: z.string().optional(),
+  /** Origin of the marker specifically — this is what crop-and-re-OCR verifies against. */
+  markerProvenance: textOriginSchema,
+  /** Origin of the answer body (may span multiple blocks/pages in practice —
+   *  if your OCR block granularity requires it, make this an array instead). */
+  bodyProvenance: textOriginSchema,
+  isContinuation: z.boolean().optional(),
+  continuesFromLabel: z.string().optional(),
+  hasDiagram: z.boolean().optional(),
+  uncertainties: z.array(z.string()).optional(),
+});
+
+export type LlmExtractedAttempt = z.infer<typeof LlmExtractedAttemptSchema>;
+
+export const LlmAnswerSheetExtractionSchema = z.object({
+  studentIdentifier: z
+    .object({
+      rollNumber: z.string().optional(),
+      rawText: z.string().optional(), // verbatim OCR of whatever field held it, for manual correction
+    })
+    .optional(),
+  attempts: z.array(LlmExtractedAttemptSchema),
+  /** Rough work, crossed-out attempts, illegible writing — anything that isn't
+   *  a labeled answer must land here. Never silently drop handwritten content. */
+  unmatchedText: z
+    .array(
+      z.object({
+        text: z.string(),
+        TextOrigin: textOriginSchema,
+        reason: z.string().optional(), // "rough work" | "illegible" | "crossed out" | ...
+      }),
+    )
+    .optional(),
+  uncertainties: z.array(z.string()).optional(),
+});
+
+export type LlmAnswerSheetExtraction = z.infer<
+  typeof LlmAnswerSheetExtractionSchema
+>;
+
+// ============================================================
+// Stored / enriched — ANSWER SHEET
+// ============================================================
+
+export type ResolutionMethod = "label" | "content-match" | "manual" | "unresolved";
+
+export interface Attempt {
+  attemptId: string;
+  claimedLabel: string;
+  /** Inferred question, e.g. "B.3". Null until resolved (or if unresolvable). */
+  resolvedQuestionId: string | null;
+  resolutionMethod: ResolutionMethod;
+  resolutionConfidence: number; // 0–1
+  markerProvenance: TextOrigin;
+  bodyProvenance: TextOrigin;
+  /** The highlighted band: from this marker to the start of the next. */
+  region: Region;
+  text: string;
+  hasDiagram: boolean;
+  figures: Figure[];
+  /** Position as written on the sheet — independent of question order,
+   *  since students frequently answer out of sequence. */
+  orderOnSheet: number;
+  isContinuation: boolean;
+  continuesFrom: string | null; // attemptId
+  confidence: Confidence;
+}
+
+export interface UnmatchedRegion {
+  regionId: string;
+  text: string;
+  region: Region;
+  TextOrigin: TextOrigin;
+  reason?: string;
+}
+
+export interface AnswerSheet {
+  answerSheetId: string;
+  /** The QuestionPaper this sheet is graded against. */
+  paperId: string;
+  sourceFileHash: string;
+  schemaVersion: string;
+  extractionVersion: string;
+  extractedAt: string;
+  pageCount: number;
+  pageDimensions: PageDimensions[];
+  studentIdentifier: {
+    rollNumber: string | null;
+    rawText: string | null;
+    confidence: number;
+  };
+  attempts: Attempt[];
+  unmatchedRegions: UnmatchedRegion[];
+  /** Derived by diffing resolved attempts against paper.sections[].questions —
+   *  never extracted directly. */
+  unattemptedQuestions: string[]; // questionIds
+  uncertainties: string[];
+}
 
 
 

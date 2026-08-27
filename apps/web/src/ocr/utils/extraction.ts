@@ -6,6 +6,7 @@ import {
   type InventoryPage,
   type BlockGeometry,
   LlmQuestionPaperExtractionSchema,
+  LlmAnswerSheetExtractionSchema,
 } from '@vedaai/shared';
 import { Mistral } from '@mistralai/mistralai';
 import fs from 'fs';
