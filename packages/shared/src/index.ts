@@ -7,3 +7,7 @@
  */
 
 export * from './http';
+export type {
+  Response,
+  ErrorResponse,
+} from "./types/response.types";

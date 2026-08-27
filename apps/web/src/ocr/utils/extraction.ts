@@ -1,4 +1,4 @@
-import type { ErrorResponse, Response } from '../../../packages/shared/types/response.types';
+import type { ErrorResponse, Response } from '@vedaai/shared';
 import { Mistral } from '@mistralai/mistralai';
 import fs from 'fs';
 
