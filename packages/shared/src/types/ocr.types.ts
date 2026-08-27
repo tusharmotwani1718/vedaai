@@ -52,8 +52,6 @@ export interface Region {
 export interface TextOrigin {
   page: number;
   blockId: string;
-  /** Char offsets into that block's raw OCR content. Used to verify
-   *  the LLM didn't paraphrase: rawBlock.slice(charStart, charEnd) === text */
   charStart: number;
   charEnd: number;
 }
