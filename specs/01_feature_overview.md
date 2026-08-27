@@ -54,7 +54,7 @@ How it works:
 
 > Utility functions live in:
 
-*apps / web / src / ocr / utils*
+*apps / api / src / ocr / utils*
 
 1. RawPage: The raw output page of OCR function. The generateOCR() function returns an array of these. Each page can have multiple blocks of different types as identifed by the OCR model.
 
