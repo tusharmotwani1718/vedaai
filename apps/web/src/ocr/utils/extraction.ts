@@ -11,7 +11,6 @@ import fs from 'fs';
 import path from 'path';
 import type { OCRPageObject } from '@mistralai/mistralai/models/components';
 import { mistraAIOcrTransformPrompt } from '../lib/constants';
-import z from 'zod';
 
 type OcrGenerationProps =
   | {
@@ -151,6 +150,8 @@ async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorRe
       },
     };
   } catch (error) {
+    console.log('error in ocr extraction...');
+    console.log(error);
     return {
       success: false,
       message: 'Something went wrong',
@@ -165,7 +166,7 @@ async function transformOcrOutput(pages: RawPage[]) {
     const { inventory, geometry } = buildBlockInventory(pages);
 
     const response = await client.chat.parse({
-      model: 'ministral-8b-latest',
+      model: 'mistral-large-latest',
       messages: [
         { role: 'system', content: mistraAIOcrTransformPrompt },
         { role: 'user', content: `Here is the OCR output: ${JSON.stringify(inventory)}` },
@@ -178,7 +179,7 @@ async function transformOcrOutput(pages: RawPage[]) {
 
     if (response.choices) {
       console.log(`transformed...`);
-      console.log(response?.choices[0]?.message?.parsed);
+      console.log(response?.choices[0]?.message?.content);
     }
   } catch (error) {
     console.error('error in transformOcrOutput');
@@ -193,7 +194,9 @@ const res = await extractOcr({
 console.log('pages...');
 console.log(JSON.stringify(res?.data?.pages));
 
-const transformedJSON = await transformOcrOutput(res?.data?.pages);
+if (res.success) {
+  const transformedJSON = await transformOcrOutput(res?.data?.pages);
 
-console.log('transformed...');
-console.log(JSON.stringify(transformedJSON));
+  console.log('transformed...');
+  console.log(JSON.stringify(transformedJSON));
+}
