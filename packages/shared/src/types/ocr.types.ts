@@ -259,35 +259,5 @@ export interface BlockGeometry {
   box: RawBlock["box"];
 }
 
-// ============================================================
-// Build both from raw OCR pages
-// ============================================================
 
-export function buildBlockInventory(pages: RawPage[]): {
-  inventory: InventoryPage[];
-  geometry: Map<string, BlockGeometry>;
-} {
-  const geometry = new Map<string, BlockGeometry>();
 
-  const inventory: InventoryPage[] = pages.map((page) => ({
-    page: page.index + 1,
-    blocks: page.blocks.map((block, b) => {
-      const id = `p${page.index}-b${b}`; // deterministic, matches raw indices
-
-      geometry.set(id, {
-        page: page.index,
-        pageWidth: page.dimensions.width,
-        pageHeight: page.dimensions.height,
-        box: block.box,
-      });
-
-      return {
-        id,
-        type: block.type || "text",
-        content: block.content,
-      };
-    }),
-  }));
-
-  return { inventory, geometry };
-}
