@@ -8,5 +8,6 @@ export interface Response {
 export interface ErrorResponse {
     success: false;
     message: string;
+    data?: any;
     error: any;
 }

@@ -24,6 +24,7 @@
 // ============================================================
 // Shared primitives
 // ============================================================
+import { z } from "zod";
 
 /** Normalized rectangle — all values are fractions (0–1) of page width/height. */
 export interface RectArea {
@@ -87,58 +88,71 @@ export interface PageDimensions {
 // LLM extraction output — QUESTION PAPER
 // ============================================================
 
-export interface LlmQuestionPart {
-  label: string; // "a", "b", "i"
-  text: string;
-  marks?: number;
-  TextOrigin: TextOrigin;
-}
 
-export interface LlmExtractedQuestion {
-  displayLabel: string; // "1", "3(a)" — as printed
-  sectionId: string; // must match a section's sectionId below
-  orderInSection: number;
-  text: string;
-  marks?: number;
-  parts?: LlmQuestionPart[];
-  /** displayLabels of alternative questions, e.g. ["4"] for "Q3 OR Q4" */
-  isOptionalWith?: string[];
-  TextOrigin: TextOrigin;
-  /** Model's own flags, e.g. "marks not clearly printed on this line" */
-  uncertainties?: string[];
-}
 
-export interface LlmExtractedSection {
-  sectionId: string; // "A", "B", "C"
-  displayName: string; // "PART-A"
-  description?: string; // "(Analytical/Problem solving questions)"
-  totalQuestions: number;
-  /** How many the student must attempt — the single most important field here. */
-  attemptCount: number;
-  marksPerQuestion?: number;
-  sectionTotal?: number;
-  /** e.g. "(10×2=20)" — kept verbatim as a checksum for validation. */
-  rawMarksExpression?: string;
-  /** e.g. "Answer should be given up to 25 words only" */
-  constraints?: string;
-  questions: LlmExtractedQuestion[];
-}
+const textOriginSchema = z.object({
+  page: z.number(),
+  blockId: z.string(),
+  charStart: z.number(),
+  charEnd: z.number(),
+});
 
-export interface LlmQuestionPaperExtraction {
-  metadata: {
-    title?: string;
-    courseCode?: string; // "6AID4-06"
-    examCode?: string; // "6E7106"
-    institution?: string;
-    session?: string; // "April/May - 2026"
-    durationMinutes?: number;
-    maxMarks?: number;
-  };
-  /** Verbatim instructions block — kept in full even after parsing attempt rules out of it. */
-  rawInstructions?: string;
-  sections: LlmExtractedSection[];
-  uncertainties?: string[];
-}
+export const LlmQuestionPartSchema = z.object({
+  label: z.string(),
+  text: z.string(),
+  marks: z.number().optional(),
+  TextOrigin: textOriginSchema,
+});
+
+export type LlmQuestionPart = z.infer<typeof LlmQuestionPartSchema>;
+
+export const LlmExtractedQuestionSchema = z.object({
+  displayLabel: z.string(),
+  sectionId: z.string(),
+  orderInSection: z.number(),
+  text: z.string(),
+  marks: z.number().optional(),
+  parts: z.array(LlmQuestionPartSchema).optional(),
+  isOptionalWith: z.array(z.string()).optional(),
+  TextOrigin: textOriginSchema,
+  uncertainties: z.array(z.string()).optional(),
+});
+
+export type LlmExtractedQuestion = z.infer<typeof LlmExtractedQuestionSchema>;
+
+export const LlmExtractedSectionSchema = z.object({
+  sectionId: z.string(),
+  displayName: z.string(),
+  description: z.string().optional(),
+  totalQuestions: z.number(),
+  attemptCount: z.number(),
+  marksPerQuestion: z.number().optional(),
+  sectionTotal: z.number().optional(),
+  rawMarksExpression: z.string().optional(),
+  constraints: z.string().optional(),
+  questions: z.array(LlmExtractedQuestionSchema),
+});
+
+export type LlmExtractedSection = z.infer<typeof LlmExtractedSectionSchema>;
+
+export const LlmQuestionPaperExtractionSchema = z.object({
+  metadata: z.object({
+    title: z.string().optional(),
+    courseCode: z.string().optional(),
+    examCode: z.string().optional(),
+    institution: z.string().optional(),
+    session: z.string().optional(),
+    durationMinutes: z.number().optional(),
+    maxMarks: z.number().optional(),
+  }),
+  rawInstructions: z.string().optional(),
+  sections: z.array(LlmExtractedSectionSchema),
+  uncertainties: z.array(z.string()).optional(),
+});
+
+export type LlmQuestionPaperExtraction = z.infer<
+  typeof LlmQuestionPaperExtractionSchema
+>;
 
 // ============================================================
 // Stored / enriched — QUESTION PAPER
