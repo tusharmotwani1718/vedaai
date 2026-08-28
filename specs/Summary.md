@@ -99,7 +99,7 @@ both 0-based, derived from raw OCR array indices. The LLM quotes ids back at us;
 look up coordinates ourselves. That is the entire reason region highlighting can be
 trusted.
 
-### Provenance
+### Provenance / Text Origin
 
 Every extracted unit carries a `TextOrigin`:
 
