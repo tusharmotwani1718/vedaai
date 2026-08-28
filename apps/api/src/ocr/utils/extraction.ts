@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 
 import { Mistral } from '@mistralai/mistralai';
 import type { OCRPageObject } from '@mistralai/mistralai/models/components';
+import { z } from 'zod';
 import {
   type BlockGeometry,
   type ErrorResponse,
@@ -326,38 +327,40 @@ function messageContentToString(content: unknown): string {
   return '';
 }
 
-async function callTransformLlm(inventory: InventoryPage[]): Promise<LlmQuestionPaperExtraction> {
-  const response = await getClient().chat.parse({
-    model: TRANSFORM_MODEL,
-    messages: [
-      { role: 'system', content: mistraAIOcrTransformPrompt },
-      { role: 'user', content: `Here is the OCR output: ${JSON.stringify(inventory)}` },
-    ],
-    responseFormat: LlmQuestionPaperExtractionSchema,
-  });
+/**
+ * The prompt + schema pair for each document type.
+ *
+ * Declared once and used for BOTH the cache fingerprint and the LLM call, so
+ * the key can never describe a different prompt from the one actually sent —
+ * which is the failure the old hand-bumped version constant allowed.
+ */
+const QUESTION_PAPER_TRANSFORM = {
+  prompt: mistraAIOcrTransformPrompt,
+  schema: LlmQuestionPaperExtractionSchema,
+} as const;
 
-  const message = response.choices?.[0]?.message;
-  if (!message) {
-    throw new Error('Transform LLM returned no choices');
-  }
+const ANSWER_SHEET_TRANSFORM = {
+  prompt: mistraAIAnswerSheetTransformPrompt,
+  schema: LlmAnswerSheetExtractionSchema,
+} as const;
 
-  // The SDK hands back `parsed` when the response satisfied the schema. Run it
-  // through zod regardless, so the return type is guaranteed rather than
-  // asserted and a malformed response fails loudly right here.
-  const candidate = message.parsed ?? JSON.parse(messageContentToString(message.content));
-  return LlmQuestionPaperExtractionSchema.parse(candidate);
-}
-
-async function callTransformLlmForAnswerSheet(
+/**
+ * Sends the inventory to the transform model and returns the parsed result.
+ *
+ * Generic over the schema so both document types share one implementation —
+ * they differed only in which prompt and schema they passed.
+ */
+async function callTransformLlm<TSchema extends z.ZodType>(
   inventory: InventoryPage[],
-): Promise<LlmAnswerSheetExtraction> {
+  transform: { prompt: string; schema: TSchema },
+): Promise<z.infer<TSchema>> {
   const response = await getClient().chat.parse({
     model: TRANSFORM_MODEL,
     messages: [
-      { role: 'system', content: mistraAIAnswerSheetTransformPrompt },
+      { role: 'system', content: transform.prompt },
       { role: 'user', content: `Here is the OCR output: ${JSON.stringify(inventory)}` },
     ],
-    responseFormat: LlmAnswerSheetExtractionSchema,
+    responseFormat: transform.schema,
   });
 
   const message = response.choices?.[0]?.message;
@@ -369,7 +372,7 @@ async function callTransformLlmForAnswerSheet(
   // through zod regardless, so the return type is guaranteed rather than
   // asserted and a malformed response fails loudly right here.
   const candidate = message.parsed ?? JSON.parse(messageContentToString(message.content));
-  return LlmAnswerSheetExtractionSchema.parse(candidate);
+  return transform.schema.parse(candidate) as z.infer<TSchema>;
 }
 
 /**
@@ -383,14 +386,21 @@ async function callTransformLlmForAnswerSheet(
  */
 export async function transformOcrOutput(pages: RawPage[]): Promise<QuestionPaperTransformResult> {
   const { inventory, geometry } = buildBlockInventory(pages);
-  const fingerprint = fingerprintOcr(inventory, TRANSFORM_MODEL, 'questionPaper');
+  const fingerprint = fingerprintOcr(
+    inventory,
+    TRANSFORM_MODEL,
+    'questionPaper',
+    QUESTION_PAPER_TRANSFORM,
+  );
 
   const cached = getCachedQuestionPaper(fingerprint);
   const cacheHit = cached !== undefined;
 
   // Clone on the way out: validation mutates the extraction in place, and the
   // cached copy must not drift with whatever a caller does to its result.
-  const extraction = cacheHit ? structuredClone(cached) : await callTransformLlm(inventory);
+  const extraction = cacheHit
+    ? structuredClone(cached)
+    : await callTransformLlm(inventory, QUESTION_PAPER_TRANSFORM);
 
   // Idempotent — a cached extraction is already normalized, so re-running this
   // only rebuilds the report.
@@ -438,7 +448,12 @@ export async function transformOcrOutputForAnswerSheet(
   pages: RawPage[],
 ): Promise<AnswerSheetTransformResult> {
   const { inventory, geometry } = buildBlockInventory(pages);
-  const fingerprint = fingerprintOcr(inventory, TRANSFORM_MODEL, 'answerSheet');
+  const fingerprint = fingerprintOcr(
+    inventory,
+    TRANSFORM_MODEL,
+    'answerSheet',
+    ANSWER_SHEET_TRANSFORM,
+  );
 
   const cached = getCachedAnswerSheet(fingerprint);
   const cacheHit = cached !== undefined;
@@ -447,7 +462,7 @@ export async function transformOcrOutputForAnswerSheet(
   // cached copy must not drift with whatever a caller does to its result.
   const extraction = cacheHit
     ? structuredClone(cached)
-    : await callTransformLlmForAnswerSheet(inventory);
+    : await callTransformLlm(inventory, ANSWER_SHEET_TRANSFORM);
 
   // Idempotent — a cached extraction is already normalized, so re-running this
   // only rebuilds the report.
