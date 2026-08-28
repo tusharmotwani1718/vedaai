@@ -47,13 +47,44 @@ export type OcrGenerationProps =
   | {
       fileUrl: string; // for cloud docs
       filePath?: never; // for local docs
+      fileBytes?: never;
+      mimeType?: never;
       documentType: TransformDocumentType;
     }
   | {
       fileUrl?: never;
       filePath: string;
+      fileBytes?: never;
+      /** Inferred from the extension when omitted. */
+      mimeType?: string;
+      documentType: TransformDocumentType;
+    }
+  | {
+      fileUrl?: never;
+      filePath?: never;
+      /** An upload held in memory — the app never writes documents to disk. */
+      fileBytes: Uint8Array;
+      mimeType: string;
       documentType: TransformDocumentType;
     };
+
+/** Mime types Mistral OCR accepts, and how each must be sent. */
+const MIME_BY_EXTENSION: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+};
+
+export const SUPPORTED_UPLOAD_MIME_TYPES = Object.values(MIME_BY_EXTENSION);
+
+function mimeFromPath(filePath: string): string {
+  const dot = filePath.lastIndexOf('.');
+  const ext = dot === -1 ? '' : filePath.slice(dot).toLowerCase();
+  return MIME_BY_EXTENSION[ext] ?? 'application/pdf';
+}
 
 /** Shape of `Response.data` returned by {@link extractOcr} on success. */
 export interface OcrExtractionData {
@@ -197,12 +228,12 @@ export function buildBlockInventory(pages: RawPage[]): {
 }
 // <--------------------------------------------------------------------------------->
 
-/** Runs Mistral OCR over a local file or a publicly reachable URL. */
+/** Runs Mistral OCR over an in-memory upload, a local file, or a public URL. */
 export async function extractOcr(props: OcrGenerationProps): Promise<Response | ErrorResponse> {
   try {
-    const { filePath, fileUrl, documentType } = props;
+    const { filePath, fileUrl, fileBytes, documentType } = props;
 
-    if (!filePath && !fileUrl) {
+    if (!filePath && !fileUrl && !fileBytes) {
       return {
         success: false,
         message: 'No file path or url provided',
@@ -213,18 +244,33 @@ export async function extractOcr(props: OcrGenerationProps): Promise<Response | 
       };
     }
 
-    let documentUrl = fileUrl;
-    if (!documentUrl && filePath) {
-      const pdfBuffer = await fs.readFile(filePath);
-      documentUrl = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+    // A URL is passed straight through; bytes and local files become data URLs.
+    // The mime type has to be right: Mistral takes PDFs as `document_url` and
+    // images as `image_url`, and mislabelling an image as a PDF fails.
+    let url: string;
+    let mimeType: string;
+
+    if (fileUrl) {
+      url = fileUrl;
+      // Only the extension is available for a remote file.
+      mimeType = props.mimeType ?? mimeFromPath(fileUrl.split('?')[0] ?? fileUrl);
+    } else if (fileBytes) {
+      mimeType = props.mimeType;
+      url = `data:${mimeType};base64,${Buffer.from(fileBytes).toString('base64')}`;
+    } else {
+      mimeType = props.mimeType ?? mimeFromPath(filePath!);
+      const bytes = await fs.readFile(filePath!);
+      url = `data:${mimeType};base64,${bytes.toString('base64')}`;
     }
+
+    const document =
+      mimeType === 'application/pdf'
+        ? ({ type: 'document_url', documentUrl: url } as const)
+        : ({ type: 'image_url', imageUrl: url } as const);
 
     const ocrResponse = await getClient().ocr.process({
       model: OCR_MODEL,
-      document: {
-        type: 'document_url',
-        documentUrl: documentUrl as string,
-      },
+      document,
       tableFormat: 'html', // default is null
       // extractHeader: False, // default is False
       // extractFooter: False, // default is False

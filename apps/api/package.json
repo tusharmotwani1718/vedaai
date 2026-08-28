@@ -16,11 +16,13 @@
     "@vedaai/shared": "workspace:*",
     "cors": "^2.8.5",
     "express": "^5.2.1",
+    "multer": "^2.2.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.2.0",
     "typescript": "^5.9.3"
   }
 }

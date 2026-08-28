@@ -93,7 +93,9 @@ export interface PaperLabelIndex {
  * combined label ("4(b)").
  */
 export function buildPaperLabelIndex(paper: LlmQuestionPaperExtraction): PaperLabelIndex {
-  const byLabel = new Map<string, LabelCandidate[]>();
+  // normalized label -> candidates. candidates can be multiple if a question label is ambiguous...
+  // example que "4", can be section A -> Q4 or section B -> Q4 or section C -> Q4
+  const byLabel = new Map<string, LabelCandidate[]>(); 
   const allQuestionIds: string[] = [];
   const sectionOf = new Map<string, string>();
   const parentQuestionOf = new Map<string, string>();

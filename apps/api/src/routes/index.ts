@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import { evaluationRouter } from './evaluation.route';
 import { healthRouter } from './health.route';
 
 /**
@@ -9,3 +10,4 @@ import { healthRouter } from './health.route';
 export const apiRouter: Router = Router();
 
 apiRouter.use(healthRouter);
+apiRouter.use(evaluationRouter);

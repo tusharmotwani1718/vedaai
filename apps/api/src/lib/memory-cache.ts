@@ -53,6 +53,7 @@ export class MemoryCache<TValue> {
     this.#entries.delete(key);
     this.#entries.set(key, value);
 
+    // delete the oldest key if the entries size extend the maxEntries allowed.
     while (this.#entries.size > this.#maxEntries) {
       const oldestKey = this.#entries.keys().next().value;
       if (oldestKey === undefined) break;
