@@ -202,19 +202,43 @@ document-keyed cache would happily serve a JSON transform whose block ids and
 character offsets no longer match the OCR they describe.
 
 ```ts
-fingerprint = sha256({ v: EXTRACTION_VERSION, model, documentType, pages: [[id, type, content], …] })
+fingerprint = sha256({
+  model,
+  documentType,
+  prompt: sha256(promptText),                          // hashed, not version-stamped
+  schema: sha256(JSON.stringify(z.toJSONSchema(schema))),
+  pages: [[id, type, content], …],                     // the OCR content itself
+})
 ```
 
-Consequences that fall out of this for free:
+Everything in the key is an **input the LLM actually saw**. Consequences that fall
+out of that for free:
 
 - Re-running OCR on the same paper produces different text → different fingerprint
   → a miss. Invalidation needs no explicit eviction.
 - `documentType` is in the key, so a question paper and an answer sheet that OCR
   identically cannot serve each other's JSON.
-- `EXTRACTION_VERSION` is in the key, so editing a prompt cannot serve stale JSON
-  produced by the previous prompt.
+- Editing a prompt changes its hash → a miss. Nothing has to be remembered.
+- Changing the response schema changes its hash → a miss. This matters because a
+  cached entry is never re-parsed, so an old object could otherwise be served
+  against a schema that has since gained a required field.
 - Geometry is deliberately **excluded** — coordinates never reach the LLM, so they
   cannot influence the output and must not influence the key.
+
+> **Why the prompt is hashed rather than versioned.** This originally used a
+> hand-bumped `EXTRACTION_VERSION = '1'` constant. It was never bumped across two
+> prompt edits in the same session — which is the whole problem with a manual
+> lever. Hashing the real prompt and schema text cannot be forgotten.
+
+To make it impossible for the key to describe one prompt while the call sends
+another, the pair is declared once and used for both:
+
+```ts
+const QUESTION_PAPER_TRANSFORM = {
+  prompt: mistraAIOcrTransformPrompt,
+  schema: LlmQuestionPaperExtractionSchema,
+} as const;
+```
 
 Two typed stores (`MemoryCache<LlmQuestionPaperExtraction>` and
 `MemoryCache<LlmAnswerSheetExtraction>`), 50 entries each. The evaluation store is
@@ -223,6 +247,23 @@ bounded at 10 because each entry holds two whole documents in memory.
 Cached extractions are `structuredClone`d in and out: validators mutate the
 extraction in place, so a shared reference would let one request corrupt another's
 cache entry.
+
+### What this cache does *not* do
+
+**Raw OCR output is never cached.** Every upload re-runs — and re-bills — OCR.
+Combined with OCR being non-deterministic, that means re-uploading the same PDF
+usually produces different text → a different fingerprint → a miss → another LLM
+call.
+
+That is correct per the spec, and it is exactly the wrong-data hazard the spec is
+guarding against. But it means this cache is a **correctness mechanism, not a
+cost-saving one**: in normal use it rarely hits. It earns its keep during
+development, when the same in-memory `RawPage[]` is transformed twice, and it is
+what stops a prompt edit from silently returning the previous prompt's JSON.
+
+Saving OCR cost would need a *separate* `fileHash → OCR output` cache. That would
+not violate the rule — the JSON cache stays keyed on OCR content — but it would
+mean OCR stops regenerating for a repeat upload. Not built; see §10.
 
 ---
 
@@ -347,8 +388,15 @@ variant is now chosen from the mime type.
 
 `fingerprintOcr(inventory, model)` had no document type in the key, and answer
 extractions were being written into a `MemoryCache<LlmQuestionPaperExtraction>`.
-Same OCR text under the two prompts produced the same key. Now:
-`2387843…` (questionPaper) vs `242fbb2…` (answerSheet).
+Same OCR text under the two prompts produced the same key.
+
+Now doubly separated — by `documentType`, and by the prompt/schema hashes, since
+the two document types necessarily use different ones. Identical OCR text:
+
+```
+questionPaper  4ed641010788fb8e2be0…
+answerSheet    80dca556b7db9b344831…
+```
 
 ### 7.11 The model miscounts characters
 
@@ -375,6 +423,23 @@ explicitly — a zero-size page produces no rects and a `NO_REGION` issue instea
 
 Leaves nothing to slice between them. Falls back to that attempt's own marker+body
 span and raises `REGION_FALLBACK`.
+
+### 7.15 A prompt edit serving the previous prompt's JSON
+
+Cache invalidation on prompt changes was originally a hand-bumped constant,
+`EXTRACTION_VERSION = '1'`. The mechanism worked; nobody pulled the lever. It was
+never bumped across two separate edits to the answer-sheet prompt, so the same
+OCR would have returned JSON built by the *old* prompt with no indication
+anything was stale.
+
+Replaced with hashes of the actual prompt text and the actual response schema, so
+invalidation is a property of the inputs rather than of someone remembering. The
+schema is included because a cached entry is never re-parsed — a schema gaining a
+required field would otherwise be served an object that predates it.
+
+The two are declared as one `{ prompt, schema }` pair and used for *both* the
+fingerprint and the LLM call, so the key cannot describe one prompt while the
+request sends another.
 
 ---
 
