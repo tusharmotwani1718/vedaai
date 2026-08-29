@@ -31,7 +31,7 @@ const SETTINGS_ITEM: NavItem[] = [{ label: 'Settings', href: '/settings', icon: 
 
 export function Sidebar({ activeHref = '/' }: { activeHref?: string }) {
   return (
-    <aside className="bg-surface rounded-panel hidden w-[19rem] shrink-0 flex-col p-5 lg:flex xl:w-[20rem]">
+    <aside className="bg-surface rounded-panel hidden w-76 shrink-0 flex-col p-5 lg:flex xl:w-[20rem]">
       {/* Brand lockup */}
       <div className="flex items-center justify-between pb-2 pl-1 pr-1 pt-1">
         <div className="flex items-center gap-2.5">
@@ -60,10 +60,10 @@ export function Sidebar({ activeHref = '/' }: { activeHref?: string }) {
       {/* Primary call to action */}
       <button
         type="button"
-        className="bg-surface-dark border-brand text-ink-inverse mt-5 flex h-[3.25rem] w-full items-center justify-center gap-2 rounded-full border-2 text-[0.95rem] font-semibold transition-transform active:scale-[0.99]"
+        className="bg-surface-dark border-brand text-ink-inverse mt-5 flex h-13 w-full items-center justify-center gap-2 rounded-full border-2 text-[0.95rem] font-semibold transition-transform active:scale-[0.99]"
       >
         <Image
-          src="/assets/extract-icon-vedaai-sidebar.png"
+          src="/assets/icon-sidebar.png"
           alt=""
           width={28}
           height={28}
