@@ -55,7 +55,7 @@ export function QuestionCard({
           {index}
         </span>
 
-        <span className="text-ink order-last w-full text-[0.95rem] leading-snug lg:order-none lg:min-w-0 lg:flex-1">
+        <span className="text-ink order-last w-full text-[0.95rem] leading-snug lg:order-0 lg:min-w-0 lg:flex-1">
           {question.text}
         </span>
 
