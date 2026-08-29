@@ -41,8 +41,19 @@ import {
   type ValidationReport,
 } from '../lib/validators/validate.question-extraction';
 
-export const OCR_MODEL = 'mistral-ocr-latest';
-export const TRANSFORM_MODEL = 'mistral-large-latest';
+/**
+ * Model ids, overridable per environment.
+ *
+ * `mistral-large-latest` is NOT the default: it is listed by `models.list()` but
+ * returns 403 `tier_not_allowed` on lower subscription tiers, which surfaces as
+ * an opaque SDK error deep inside the transform. `mistral-medium-latest` is the
+ * most capable model that works on a standard key.
+ *
+ * Changing either of these changes the cache fingerprint, so a model switch
+ * invalidates cached transforms automatically.
+ */
+export const OCR_MODEL = process.env.MISTRAL_OCR_MODEL ?? 'mistral-ocr-latest';
+export const TRANSFORM_MODEL = process.env.MISTRAL_TRANSFORM_MODEL ?? 'mistral-medium-latest';
 
 export type OcrGenerationProps =
   | {
@@ -350,18 +361,77 @@ const ANSWER_SHEET_TRANSFORM = {
  * Generic over the schema so both document types share one implementation —
  * they differed only in which prompt and schema they passed.
  */
+/**
+ * Recursively drops null-valued properties.
+ *
+ * Under a JSON Schema response format the model fills every declared field,
+ * emitting `null` for the ones it has nothing to say about — `"courseCode": null`
+ * rather than omitting the key. Our schemas mark those `.optional()`, which in
+ * zod means `string | undefined`, so a null fails validation and the whole
+ * extraction is rejected over fields we never required.
+ *
+ * Stripping is safe here because no field in either Llm*Extraction schema is
+ * meaningfully nullable: absent and null carry the same meaning.
+ */
+function stripNulls(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.filter((item) => item !== null).map(stripNulls);
+  }
+  if (value !== null && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      if (item === null) continue;
+      out[key] = stripNulls(item);
+    }
+    return out;
+  }
+  return value;
+}
+
+/**
+ * Turns an SDK failure into a message that says what actually went wrong.
+ *
+ * The Mistral SDK throws from its response matcher, so an HTTP error arrives as
+ * a stack pointing at `matchers.js` with the status buried in a dumped Response
+ * object. A 403 `tier_not_allowed` is indistinguishable from a genuine bug at a
+ * glance, which is exactly the confusion this avoids.
+ */
+function describeSdkError(model: string, err: unknown): Error {
+  const e = err as { statusCode?: number; body?: unknown };
+  const status = e?.statusCode;
+  const body = typeof e?.body === 'string' ? e.body : undefined;
+
+  if (status === undefined) {
+    return err instanceof Error ? err : new Error(String(err));
+  }
+
+  const hint =
+    status === 403
+      ? ` — set MISTRAL_TRANSFORM_MODEL to a model your key can use (mistral-medium-latest works on standard tiers)`
+      : '';
+
+  return new Error(
+    `Transform model "${model}" failed with ${status}: ${body ?? '(no body)'}${hint}`,
+  );
+}
+
 async function callTransformLlm<TSchema extends z.ZodType>(
   inventory: InventoryPage[],
   transform: { prompt: string; schema: TSchema },
 ): Promise<z.infer<TSchema>> {
-  const response = await getClient().chat.parse({
-    model: TRANSFORM_MODEL,
-    messages: [
-      { role: 'system', content: transform.prompt },
-      { role: 'user', content: `Here is the OCR output: ${JSON.stringify(inventory)}` },
-    ],
-    responseFormat: transform.schema,
-  });
+  let response;
+  try {
+    response = await getClient().chat.parse({
+      model: TRANSFORM_MODEL,
+      messages: [
+        { role: 'system', content: transform.prompt },
+        { role: 'user', content: `Here is the OCR output: ${JSON.stringify(inventory)}` },
+      ],
+      responseFormat: transform.schema,
+    });
+  } catch (err) {
+    throw describeSdkError(TRANSFORM_MODEL, err);
+  }
 
   const message = response.choices?.[0]?.message;
   if (!message) {
@@ -372,7 +442,7 @@ async function callTransformLlm<TSchema extends z.ZodType>(
   // through zod regardless, so the return type is guaranteed rather than
   // asserted and a malformed response fails loudly right here.
   const candidate = message.parsed ?? JSON.parse(messageContentToString(message.content));
-  return transform.schema.parse(candidate) as z.infer<TSchema>;
+  return transform.schema.parse(stripNulls(candidate)) as z.infer<TSchema>;
 }
 
 /**

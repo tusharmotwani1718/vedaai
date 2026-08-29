@@ -109,10 +109,18 @@ evaluationRouter.post(
     ]);
 
     // The transforms are independent too — resolution is what needs both.
-    const [paperResult, sheetResult] = await Promise.all([
-      transformOcrOutput(paperOcr.pages),
-      transformOcrOutputForAnswerSheet(sheetOcr.pages),
-    ]);
+    // Wrapped so an upstream model failure (wrong tier, rate limit, bad schema)
+    // reaches the client as something actionable rather than a bare 500.
+    let paperResult;
+    let sheetResult;
+    try {
+      [paperResult, sheetResult] = await Promise.all([
+        transformOcrOutput(paperOcr.pages),
+        transformOcrOutputForAnswerSheet(sheetOcr.pages),
+      ]);
+    } catch (err) {
+      throw new HttpError(502, 'TRANSFORM_FAILED', (err as Error).message);
+    }
 
     const mapping = mapAnswersToQuestions(sheetResult, paperResult.extraction);
 
