@@ -10,7 +10,9 @@
 // re-running OCR.
 
 import type {
+  AnswerValidationIssue,
   InventoryPage,
+  IssueSeverity,
   LlmAnswerSheetExtraction,
   TextOrigin,
 } from '@vedaai/shared';
@@ -56,16 +58,10 @@ function indexBlockOrdinals(inventory: InventoryPage[]): Map<string, number> {
 // Issue list — what the UI renders
 // ============================================================
 
-export type IssueSeverity = 'error' | 'warning';
-
-export interface AnswerValidationIssue {
-  severity: IssueSeverity;
-  /** Stable machine-readable code, so the UI can group or filter. */
-  code: string;
-  /** What the issue is about: "attempt a3", "block p1-b4", "section A". */
-  scope: string;
-  message: string;
-}
+// The shapes themselves are part of the wire contract, so they are defined in
+// `@vedaai/shared` and re-exported here — this file is still where the issue
+// vocabulary is produced, and every existing importer keeps working.
+export type { AnswerValidationIssue, IssueSeverity };
 
 // ============================================================
 // LEVEL 0a — Page index normalization

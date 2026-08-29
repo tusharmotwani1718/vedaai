@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
-import type { ApiFailure } from '@vedaai/shared';
+import { MulterError } from 'multer';
+import { MAX_UPLOAD_MB, type ApiFailure } from '@vedaai/shared';
 
 import { HttpError } from '../http-error';
 
@@ -23,6 +24,24 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
       error: { code: err.code, message: err.message },
     };
     res.status(err.status).json(body);
+    return;
+  }
+
+  // Multer rejects an upload before any route sees it, so its errors arrive
+  // here rather than as HttpErrors. Without this they render as a bare 500 and
+  // the client can only say "something went wrong" for an oversized file.
+  if (err instanceof MulterError) {
+    const body: ApiFailure = {
+      ok: false,
+      error: {
+        code: err.code,
+        message:
+          err.code === 'LIMIT_FILE_SIZE'
+            ? `"${err.field}" is larger than the ${MAX_UPLOAD_MB}MB limit`
+            : err.message,
+      },
+    };
+    res.status(413).json(body);
     return;
   }
 

@@ -44,6 +44,10 @@
   --color-pdf: #de534e; /* PDF file badge */
   --color-ink-faint: #b9b9b9; /* file meta: "2MB • 2 Pages" */
 
+  /* Reuses the red already in the palette rather than introducing a hue the
+     design never specifies — the Figma has no error state to sample from. */
+  --color-danger: #de534e;
+
   --color-border-subtle: #e7e5e5;
   --color-border-dashed: #d4d1d1; /* dropzone dashed outline */
   --color-disabled: #9d9b9b; /* disabled button fill */

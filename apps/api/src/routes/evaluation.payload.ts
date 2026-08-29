@@ -1,13 +1,21 @@
-import type { LlmExtractedAttempt, Region } from '@vedaai/shared';
+import type {
+  AttemptPayload,
+  DocumentKind,
+  DocumentPayload,
+  EvaluationPayload,
+  LlmExtractedAttempt,
+  SectionPayload,
+} from '@vedaai/shared';
 
-import type { AnswerValidationIssue } from '../ocr/lib/validators/validate.answer-extraction';
-import type { QuestionAnswer } from '../ocr/lib/resolution/resolve-attempts';
-import type { DocumentKind, Evaluation } from '../store/evaluation.store';
+import type { Evaluation } from '../store/evaluation.store';
 
 /**
  * Turns a stored Evaluation into something that survives `JSON.stringify`.
  *
- * Two things in the pipeline do not serialize on their own:
+ * The shapes it produces are the wire contract and live in
+ * `@vedaai/shared/types/evaluation.types` so the frontend compiles against the
+ * same definitions; this file is only the conversion. Two things in the
+ * pipeline do not serialize on their own:
  *
  *  - `mapping.byQuestionId` and the block `geometry` are `Map`s, which
  *    stringify to `{}`. The mapping becomes a plain object here; geometry is
@@ -17,85 +25,14 @@ import type { DocumentKind, Evaluation } from '../store/evaluation.store';
  *    than inlined as base64.
  */
 
-export interface QuestionPayload {
-  /** Stable id the mapping is keyed by, e.g. "A.3". */
-  questionId: string;
-  displayLabel: string;
-  text: string;
-  marks?: number;
-  parts: Array<{ partId: string; label: string; text: string; marks?: number }>;
-  isOptionalWith: string[];
-  /** Whether any attempt resolved to this question. */
-  answered: boolean;
-}
-
-export interface SectionPayload {
-  sectionId: string;
-  displayName: string;
-  description?: string;
-  totalQuestions: number;
-  attemptCount: number;
-  marksPerQuestion?: number;
-  sectionTotal?: number;
-  rawMarksExpression?: string;
-  constraints?: string;
-  questions: QuestionPayload[];
-}
-
-export interface AttemptPayload {
-  attemptId: string;
-  orderOnSheet: number;
-  claimedLabel: string;
-  text: string;
-  hasDiagram: boolean;
-  isContinuation: boolean;
-  continuesFrom: string | null;
-  resolvedQuestionId: string | null;
-  resolutionConfidence: number;
-  /** Where to draw this attempt's highlight. */
-  region: Region;
-}
-
-export interface DocumentPayload {
-  kind: DocumentKind;
-  fileName: string;
-  mimeType: string;
-  pageCount: number;
-  pages: Array<{ index: number; width: number; height: number }>;
-  /** Fetch the original bytes here; the answers pane renders this. */
-  url: string;
-}
-
-export interface EvaluationPayload {
-  evaluationId: string;
-  createdAt: string;
-  paper: {
-    metadata: Record<string, unknown>;
-    rawInstructions?: string;
-    sections: SectionPayload[];
-    maxMarks?: number;
-  };
-  answerSheet: {
-    attempts: AttemptPayload[];
-    unattemptedQuestions: string[];
-  };
-  /**
-   * questionId -> what answers it, and the rectangles to highlight.
-   * `Object.fromEntries` of the internal Map.
-   */
-  mapping: Record<string, QuestionAnswer>;
-  issues: {
-    questionPaper: Array<{ scope: string; ok: boolean; reason?: string }>;
-    answerSheet: AnswerValidationIssue[];
-    resolution: AnswerValidationIssue[];
-  };
-  summary: {
-    questionPaper: { hardFailures: number; warnings: number };
-    answerSheet: { hardFailures: number; warnings: number };
-    resolution: { resolved: number; unresolved: number };
-  };
-  documents: DocumentPayload[];
-}
+// Re-exported so existing importers (and the route) keep their single import site.
+export type {
+  AttemptPayload,
+  DocumentPayload,
+  EvaluationPayload,
+  QuestionPayload,
+  SectionPayload,
+} from '@vedaai/shared';
 
 function documentPayload(
   evaluationId: string,

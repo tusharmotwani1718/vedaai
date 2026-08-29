@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import type { DocumentKind } from '@vedaai/shared';
+
 import { MemoryCache, type CacheStats } from '../lib/memory-cache';
 import type {
   AnswerMappingResult,
@@ -16,7 +18,7 @@ import type {
  * renders the actual document, not a reconstruction of it.
  */
 
-export type DocumentKind = 'question-paper' | 'answer-sheet';
+export type { DocumentKind };
 
 export interface StoredDocument {
   bytes: Buffer;

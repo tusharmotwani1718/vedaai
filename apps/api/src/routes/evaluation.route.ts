@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import type { ApiSuccess } from '@vedaai/shared';
+import { MAX_UPLOAD_BYTES, type ApiSuccess } from '@vedaai/shared';
 
 import { HttpError } from '../http-error';
 import {
@@ -20,8 +20,6 @@ import {
 import { toEvaluationPayload, type EvaluationPayload } from './evaluation.payload';
 
 export const evaluationRouter: Router = Router();
-
-const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 /**
  * Uploads are held in memory, never written to disk — the product runs without

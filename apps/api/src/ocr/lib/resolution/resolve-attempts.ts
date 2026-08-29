@@ -17,6 +17,7 @@ import type {
   LlmAnswerSheetExtraction,
   LlmExtractedAttempt,
   LlmQuestionPaperExtraction,
+  QuestionAnswer,
   Region,
   ResolutionMethod,
 } from '@vedaai/shared';
@@ -95,7 +96,7 @@ export interface PaperLabelIndex {
 export function buildPaperLabelIndex(paper: LlmQuestionPaperExtraction): PaperLabelIndex {
   // normalized label -> candidates. candidates can be multiple if a question label is ambiguous...
   // example que "4", can be section A -> Q4 or section B -> Q4 or section C -> Q4
-  const byLabel = new Map<string, LabelCandidate[]>(); 
+  const byLabel = new Map<string, LabelCandidate[]>();
   const allQuestionIds: string[] = [];
   const sectionOf = new Map<string, string>();
   const parentQuestionOf = new Map<string, string>();
@@ -521,20 +522,8 @@ export function resolveAnswerSheet(
 // The thing the UI actually asks for
 // ============================================================
 
-export interface QuestionAnswer {
-  questionId: string;
-  /** Contributing attemptIds, in sheet order. More than one when continued. */
-  attemptIds: string[];
-  /**
-   * Every rectangle to highlight for this question, in sheet order. Rects from
-   * a continuation follow the ones from the original, so a page-spanning answer
-   * highlights as a whole.
-   */
-  region: Region;
-  /** Lowest confidence among the contributing attempts. */
-  confidence: number;
-  method: ResolutionMethod;
-}
+// Defined in `@vedaai/shared` — it is sent to the client verbatim.
+export type { QuestionAnswer };
 
 /**
  * Closes the loop: questionId -> the rectangles to highlight.

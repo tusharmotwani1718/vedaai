@@ -7,8 +7,7 @@
  */
 
 export * from './http';
-export type {
-  Response,
-  ErrorResponse,
-} from "./types/response.types";
-export * from "./types/ocr.types"
+export * from './upload';
+export type { Response, ErrorResponse } from './types/response.types';
+export * from './types/ocr.types';
+export * from './types/evaluation.types';
