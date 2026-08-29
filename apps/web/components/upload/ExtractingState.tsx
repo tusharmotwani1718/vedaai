@@ -7,7 +7,7 @@
  * reference shows a static mark and a warning rather than a bar.
  *
  * Unlike the upload screen, this one sits on its own white card filling the
- * content area (`specs/design/design-reference/extracting-state.png`).
+ * content area (`specs/design/design-reference/extracting-state-03.png`).
  */
 export function ExtractingState() {
   return (

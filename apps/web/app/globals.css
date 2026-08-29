@@ -48,6 +48,21 @@
      design never specifies — the Figma has no error state to sample from. */
   --color-danger: #de534e;
 
+  /* --- evaluation split view -------------------------------------------- */
+  /* Sampled from split-view-documents-04.png. */
+  --color-badge: #555555; /* question number circle */
+  --color-mark-pass: #34ac15; /* awarded marks, and the region tag on the sheet */
+  --color-mark-pass-bg: #ecf8ea;
+  --color-mark-fail: #c0350a; /* a question worth zero */
+  --color-mark-fail-bg: #ffe9e2;
+  --color-toolbar: #303030; /* the answer sheet's dark header */
+  --color-toolbar-control: #454545; /* zoom / paging pills inside it */
+
+  /* The answer highlight. The fill is laid over the scan at low alpha, so it is
+     stored as a solid and given its opacity at the call site. */
+  --color-highlight: #82d163;
+  --color-highlight-edge: #3dd218;
+
   --color-border-subtle: #e7e5e5;
   --color-border-dashed: #d4d1d1; /* dropzone dashed outline */
   --color-disabled: #9d9b9b; /* disabled button fill */

@@ -4,6 +4,7 @@ import type {
   DocumentPayload,
   EvaluationPayload,
   LlmExtractedAttempt,
+  QuestionReview,
   SectionPayload,
 } from '@vedaai/shared';
 
@@ -31,8 +32,28 @@ export type {
   DocumentPayload,
   EvaluationPayload,
   QuestionPayload,
+  QuestionReview,
   SectionPayload,
 } from '@vedaai/shared';
+
+/**
+ * The AI review of one question.
+ *
+ * There is no marking model yet, so this reports what is actually known rather
+ * than guessing. A question nothing on the sheet answers is genuinely worth
+ * zero and is reported as such — that is the resolver's conclusion, not a
+ * placeholder. Everything else is `pending`: the pipeline can say the answer
+ * exists but nothing has judged it, and a fabricated score is precisely the
+ * kind of number a teacher would act on.
+ *
+ * When the marking model lands, only this function changes.
+ */
+function reviewOf(answered: boolean): QuestionReview {
+  if (!answered) {
+    return { awardedMarks: 0, feedback: null, status: 'unattempted' };
+  }
+  return { awardedMarks: null, feedback: null, status: 'pending' };
+}
 
 function documentPayload(
   evaluationId: string,
@@ -72,6 +93,8 @@ export function toEvaluationPayload(evaluation: Evaluation): EvaluationPayload {
     constraints: s.constraints,
     questions: s.questions.map((q) => {
       const questionId = `${s.sectionId}.${q.displayLabel}`;
+      const answered = questionId in mappingObject;
+
       return {
         questionId,
         displayLabel: q.displayLabel,
@@ -84,7 +107,8 @@ export function toEvaluationPayload(evaluation: Evaluation): EvaluationPayload {
           marks: p.marks,
         })),
         isOptionalWith: q.isOptionalWith ?? [],
-        answered: questionId in mappingObject,
+        answered,
+        review: reviewOf(answered),
       };
     }),
   }));

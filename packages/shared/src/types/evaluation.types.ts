@@ -51,6 +51,33 @@ export interface QuestionAnswer {
   method: ResolutionMethod;
 }
 
+/**
+ * How far the AI review of one answer has got.
+ *
+ * `pending` is the only status a real answer can currently have: no marking
+ * model exists yet, so nothing has scored it. `unattempted` is not a placeholder
+ * — the resolver already knows for certain that nothing on the sheet answers the
+ * question, and zero is the honest score for that.
+ */
+export type ReviewStatus = 'pending' | 'reviewed' | 'unattempted';
+
+/**
+ * The AI marking of a single question.
+ *
+ * Deliberately nullable rather than absent: the shape is part of the contract
+ * now so the UI is built against its finished form, and the marking model can
+ * be dropped in behind it without another payload change. Anything that renders
+ * `awardedMarks` must handle `null` — a pending review has no score, and
+ * inventing one would be a number a teacher could act on.
+ */
+export interface QuestionReview {
+  /** Marks awarded, out of the question's own `marks`. `null` while pending. */
+  awardedMarks: number | null;
+  /** A sentence or two explaining the score. `null` while pending. */
+  feedback: string | null;
+  status: ReviewStatus;
+}
+
 export interface QuestionPayload {
   /** Stable id the mapping is keyed by, e.g. "A.3". */
   questionId: string;
@@ -61,6 +88,7 @@ export interface QuestionPayload {
   isOptionalWith: string[];
   /** Whether any attempt resolved to this question. */
   answered: boolean;
+  review: QuestionReview;
 }
 
 export interface SectionPayload {
