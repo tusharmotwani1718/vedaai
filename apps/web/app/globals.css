@@ -39,6 +39,11 @@
   --color-canvas-from: #f4f3f3;
   --color-canvas-to: #eceaea;
 
+  --color-surface-chip: #f6f6f6; /* the selected-file chip inside a dropzone */
+  --color-close: #545454; /* round remove button on a file chip */
+  --color-pdf: #de534e; /* PDF file badge */
+  --color-ink-faint: #b9b9b9; /* file meta: "2MB • 2 Pages" */
+
   --color-border-subtle: #e7e5e5;
   --color-border-dashed: #d4d1d1; /* dropzone dashed outline */
   --color-disabled: #9d9b9b; /* disabled button fill */
@@ -73,7 +78,7 @@
   /* H1 on mobile. Measured from the mobile reference (~24px); the Figma spec
      covered desktop only, so confirm this one. */
   --text-display-sm: 1.2rem;
-  --text-display-sm--line-height: 1.0;
+  --text-display-sm--line-height: 1;
   --text-display-sm--letter-spacing: -0.04em;
   --text-display-sm--font-weight: 700;
 
@@ -85,13 +90,13 @@
 
   /* Dropzone title — 20 / 22px / -6% / SemiBold. */
   --text-card-title: 1rem;
-  --text-card-title--line-height: 1.0rem;
+  --text-card-title--line-height: 1rem;
   --text-card-title--letter-spacing: -0.06em;
   --text-card-title--font-weight: 600;
 
   /* "Max 10MB" — 14 / 22px / -6% / Regular. */
   --text-card-hint: 0.875rem;
-  --text-card-hint--line-height: 1.0rem;
+  --text-card-hint--line-height: 1rem;
   --text-card-hint--letter-spacing: -0.06em;
   --text-card-hint--font-weight: 400;
 

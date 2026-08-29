@@ -75,10 +75,7 @@ const BADGES: Array<{ icon: ComponentType<SVGProps<SVGSVGElement>>; left: string
  */
 function HeroIllustration({ className = '' }: { className?: string }) {
   return (
-    <div
-      className={`relative size-20 shrink-0 lg:size-32 ${className}`}
-      aria-hidden="true"
-    >
+    <div className={`relative size-20 shrink-0 lg:size-32 ${className}`} aria-hidden="true">
       {/* rings */}
       <span className="bg-brand-ring-soft absolute inset-0 rounded-full" />
       <span className="bg-brand-ring absolute inset-[11.1%] rounded-full" />
