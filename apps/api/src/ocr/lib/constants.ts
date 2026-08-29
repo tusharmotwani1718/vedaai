@@ -79,6 +79,9 @@ If instead each question is its own block (as in a Part A list), each question u
 - Do not drop any question. If a block holds ten questions, return ten.
 - If a value genuinely isn't in the paper, omit the optional field rather than guessing. For required fields, use your best reading and add a note in \`uncertainties\`.
 - The student-facing correctness of this output matters: a wrong block id or a dropped question corrupts grading downstream. Prefer flagging uncertainty over inventing data.
+
+
+Important Note: If the question paper is in both english and hindi, you just return the english questions in the specified format and order and strictly ignore the hindi ones.
 `;
 
 export const mistraAIAnswerSheetTransformPrompt: string = `
