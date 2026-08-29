@@ -47,7 +47,7 @@ function Unavailable({ message }: { message: string }) {
       <h1 className="text-ink text-2xl font-bold tracking-[-0.04em]">
         This evaluation isn&rsquo;t available
       </h1>
-      <p className="text-ink-muted text-lead max-w-112 mt-2">{message}</p>
+      <p className="text-ink-muted text-lead max-w-md mt-2">{message}</p>
       <Link
         href="/"
         className="bg-surface-dark text-ink-inverse mt-7 flex h-[3.4rem] items-center rounded-full px-8 text-[1.05rem] font-semibold hover:brightness-125"

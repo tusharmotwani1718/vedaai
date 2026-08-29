@@ -110,7 +110,7 @@ export function UploadScreen() {
         ) : (
           <p
             role="alert"
-            className="text-danger max-w-88 lg:max-w-112 mt-4 text-center text-[0.85rem] leading-relaxed lg:text-[0.9rem]"
+            className="text-danger max-w-88 lg:max-w-md mt-4 text-center text-[0.85rem] leading-relaxed lg:text-[0.9rem]"
           >
             {error}
           </p>
