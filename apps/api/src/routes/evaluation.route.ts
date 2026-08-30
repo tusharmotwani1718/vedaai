@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { MAX_UPLOAD_BYTES, type ApiSuccess } from '@vedaai/shared';
+import { isValidUploadId, MAX_UPLOAD_BYTES, type ApiSuccess } from '@vedaai/shared';
 
 import { HttpError } from '../http-error';
+import { reportProgress } from '../realtime/progress';
 import {
   collectAnswersToMark,
   extractOcr,
@@ -48,6 +49,17 @@ function requireFile(files: UploadedFiles | undefined, field: string): Express.M
     throw HttpError.badRequest(`Missing file field "${field}"`, 'MISSING_FILE');
   }
   return file;
+}
+
+/**
+ * The upload id a client sends alongside its files, if it sent a usable one.
+ *
+ * Optional by design: progress is a convenience, and an upload without an id -
+ * or with a malformed one - must still be processed exactly as before.
+ */
+function uploadIdFrom(body: unknown): string | undefined {
+  const value = (body as { uploadId?: unknown } | undefined)?.uploadId;
+  return isValidUploadId(value) ? value : undefined;
 }
 
 /** Runs OCR and surfaces its envelope as an HttpError the error handler can render. */
@@ -102,6 +114,19 @@ evaluationRouter.post(
     const paperFile = requireFile(files, 'questionPaper');
     const sheetFile = requireFile(files, 'answerSheet');
 
+    /*
+     * Progress is reported from here rather than from inside the pipeline.
+     *
+     * This handler is the only place that knows the order of the stages, and
+     * keeping the emits here leaves extraction.ts free of any transport
+     * concern - those functions stay runnable, and testable, with no server at
+     * all. An upload that sends no id (or an unreachable socket) simply runs
+     * without progress; nothing below depends on it.
+     */
+    const uploadId = uploadIdFrom(req.body);
+
+    reportProgress(uploadId, 'ocr');
+
     // Both OCR calls are independent, so they overlap rather than queue.
     const [paperOcr, sheetOcr] = await Promise.all([
       ocrPages(paperFile, 'questionPaper'),
@@ -111,6 +136,8 @@ evaluationRouter.post(
     // The transforms are independent too — resolution is what needs both.
     // Wrapped so an upstream model failure (wrong tier, rate limit, bad schema)
     // reaches the client as something actionable rather than a bare 500.
+    reportProgress(uploadId, 'transform');
+
     let paperResult;
     let sheetResult;
     try {
@@ -122,12 +149,16 @@ evaluationRouter.post(
       throw new HttpError(502, 'TRANSFORM_FAILED', (err as Error).message);
     }
 
+    // Synchronous and measured in milliseconds, so this stage is announced for
+    // completeness rather than because anyone will read it.
+    reportProgress(uploadId, 'mapping');
     const mapping = mapAnswersToQuestions(sheetResult, paperResult.extraction);
 
     // Marking runs last and cannot fail the request. Everything above it - the
     // questions, the answers, the highlight regions - is the feature; a score
     // sits on top, so an unavailable or rate-limited marking model costs the
     // teacher some numbers rather than the whole upload.
+    reportProgress(uploadId, 'marking');
     const marking = await markAnswers(
       collectAnswersToMark(paperResult.extraction, sheetResult, mapping),
     );

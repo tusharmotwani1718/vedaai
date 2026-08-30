@@ -186,7 +186,7 @@ Every JSON response uses one envelope: `{ ok: true, data }` or
 central handler renders it. Express 5 forwards rejected promises from async
 handlers automatically, so no route needs its own try/catch.
 
-Uploads: 25 MB cap, 2 files, `multer.memoryStorage()` — documents never touch
+Uploads: 10 MB cap, 2 files, `multer.memoryStorage()` — documents never touch
 disk. Accepted: PDF, PNG, JPEG, WebP, AVIF; anything else is `415` **before** any
 API call is billed.
 

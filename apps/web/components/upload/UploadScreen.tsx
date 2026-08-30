@@ -2,10 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from '@vedaai/shared';
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB, type EvaluationPhase } from '@vedaai/shared';
 
 import { ApiError, createEvaluation } from '@/lib/api';
 import { formatFileSize } from '@/lib/file-meta';
+import { newUploadId, watchEvaluationProgress } from '@/lib/progress-socket';
 
 import { ExtractingState } from './ExtractingState';
 import { StartMappingButton } from './StartMappingButton';
@@ -31,6 +32,7 @@ export function UploadScreen() {
   const [questionPaper, setQuestionPaper] = useState<File | null>(null);
   const [answerSheet, setAnswerSheet] = useState<File | null>(null);
   const [extracting, setExtracting] = useState(false);
+  const [phase, setPhase] = useState<EvaluationPhase | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const ready = questionPaper !== null && answerSheet !== null;
@@ -58,9 +60,19 @@ export function UploadScreen() {
 
     setExtracting(true);
     setError(null);
+    setPhase(null);
+
+    // The id is minted here, before anything is sent, so the socket can be
+    // listening for this upload by the time the server starts reporting on it.
+    const uploadId = newUploadId();
+    const progress = watchEvaluationProgress(uploadId, setPhase);
 
     try {
-      const evaluation = await createEvaluation({ questionPaper, answerSheet });
+      // Bounded inside the watch itself, so a socket that never connects delays
+      // the upload by a couple of seconds at most rather than blocking it.
+      await progress.ready;
+
+      const evaluation = await createEvaluation({ questionPaper, answerSheet, uploadId });
 
       // Deliberately stay in the extracting state through the navigation: the
       // next route fetches on the server, and dropping back to the form here
@@ -68,15 +80,21 @@ export function UploadScreen() {
       router.push(`/evaluations/${evaluation.evaluationId}`);
     } catch (err) {
       setExtracting(false);
+      setPhase(null);
       setError(
         err instanceof ApiError
           ? err.message
           : 'Something went wrong while extracting. Please try again.',
       );
+    } finally {
+      // The evaluation is over either way, and the socket has nothing left to
+      // report. `finally` rather than a success path, so a failed upload does
+      // not leave a connection open behind it.
+      progress.dispose();
     }
   }
 
-  if (extracting) return <ExtractingState />;
+  if (extracting) return <ExtractingState phase={phase} />;
 
   return (
     <div className="max-w-248 mx-auto flex w-full flex-col px-1 py-0 lg:justify-center lg:py-6">
@@ -110,7 +128,7 @@ export function UploadScreen() {
         ) : (
           <p
             role="alert"
-            className="text-danger max-w-88 lg:max-w-md mt-4 text-center text-[0.85rem] leading-relaxed lg:text-[0.9rem]"
+            className="text-danger max-w-88 mt-4 text-center text-[0.85rem] leading-relaxed lg:max-w-md lg:text-[0.9rem]"
           >
             {error}
           </p>

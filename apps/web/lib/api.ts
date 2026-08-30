@@ -90,11 +90,17 @@ export async function getHealth(): Promise<HealthPayload | null> {
 export async function createEvaluation(input: {
   questionPaper: File;
   answerSheet: File;
+  /**
+   * Ties this upload to a progress socket the client has already joined.
+   * Optional: without it the pipeline runs exactly the same, silently.
+   */
+  uploadId?: string;
   signal?: AbortSignal;
 }): Promise<EvaluationPayload> {
   const form = new FormData();
   form.append('questionPaper', input.questionPaper);
   form.append('answerSheet', input.answerSheet);
+  if (input.uploadId !== undefined) form.append('uploadId', input.uploadId);
 
   return request<EvaluationPayload>('/api/evaluations', {
     method: 'POST',

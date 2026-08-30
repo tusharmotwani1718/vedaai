@@ -1,15 +1,33 @@
+import type { EvaluationPhase } from '@vedaai/shared';
+
+/**
+ * What each pipeline stage is called on screen.
+ *
+ * The copy lives here rather than on the wire: the API sends a stable phase
+ * key, and the words belong to the only side that renders anything.
+ */
+const PHASE_LABELS: Record<EvaluationPhase, string> = {
+  ocr: 'Extracting Documents',
+  transform: 'Transforming Documents',
+  mapping: 'Mapping Answers',
+  marking: 'Reviewing Answers with AI',
+};
+
 /**
  * The waiting screen, shown for the whole life of `POST /api/evaluations`.
  *
  * That request runs two OCR calls and two LLM calls before it resolves, so this
- * is on screen for 30–120s. There is no progress to report — the API is a
- * single synchronous call with no intermediate state to poll — which is why the
- * reference shows a static mark and a warning rather than a bar.
+ * is on screen for 30–120s. The heading names the stage the pipeline has
+ * reached, reported over a socket while the upload is still in flight; it falls
+ * back to the reference's own wording until the first stage arrives, and stays
+ * there for the whole run if the socket never connects.
+ *
+ * Still no bar, per the reference and the spec: the stage is the progress.
  *
  * Unlike the upload screen, this one sits on its own white card filling the
  * content area (`specs/design/design-reference/extracting-state-03.png`).
  */
-export function ExtractingState() {
+export function ExtractingState({ phase }: { phase?: EvaluationPhase | null }) {
   return (
     <div
       className="bg-surface rounded-panel min-h-125 flex h-full flex-col items-center justify-center px-6 text-center"
@@ -18,7 +36,9 @@ export function ExtractingState() {
     >
       <ExtractingSparkle />
 
-      <h1 className="text-ink mt-7 text-2xl font-bold tracking-[-0.04em]">Extracting&hellip;</h1>
+      <h1 className="text-ink mt-7 text-2xl font-bold tracking-[-0.04em]">
+        {phase == null ? <>Extracting&hellip;</> : PHASE_LABELS[phase]}
+      </h1>
       <p className="text-ink-muted text-lead mt-2">This may take a while</p>
     </div>
   );
