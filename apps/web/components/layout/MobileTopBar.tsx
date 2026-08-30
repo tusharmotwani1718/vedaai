@@ -63,12 +63,13 @@ export function MobileTopBar({
           <span className="bg-brand ring-surface absolute right-2 top-1.5 size-2 rounded-full ring-2" />
         </button>
 
-        <span
-          aria-hidden="true"
-          className="bg-surface-sunken text-ink-muted grid size-10 place-items-center rounded-full text-[0.7rem] font-bold"
-        >
-          {initials}
-        </span>
+        <Image
+          src="/assets/user.jpg"
+          alt=""
+          width={32}
+          height={32}
+          className="size-9 rounded-full"
+        />
 
         <button
           type="button"

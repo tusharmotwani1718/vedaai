@@ -20,16 +20,25 @@ import { SidebarSchoolCard } from './SidebarSchoolCard';
  * varies: it drops the labels and centres what is left.
  */
 
+/*
+ * Exams is the only section that exists.
+ *
+ * The rest are shown but blocked: they are real parts of the product and
+ * hiding them would misrepresent the navigation, but none of them has a page
+ * behind it, so every one is a link to a 404. `disabled` is set here rather
+ * than derived from the route table because it is a product decision about
+ * what is ready, not a fact about the filesystem.
+ */
 export const NAV_ITEMS: NavItem[] = [
-  { label: 'Home', href: '/home', icon: HomeIcon },
-  { label: 'My Classroom', href: '/classroom', icon: ClassroomIcon },
-  { label: 'Assignments', href: '/assignments', icon: AssignmentsIcon },
+  { label: 'Home', href: '/home', icon: HomeIcon, disabled: true },
+  { label: 'My Classroom', href: '/classroom', icon: ClassroomIcon, disabled: true },
+  { label: 'Assignments', href: '/assignments', icon: AssignmentsIcon, disabled: true },
   { label: 'Exams', href: '/', icon: ExamsIcon },
-  { label: 'My Library', href: '/library', icon: LibraryIcon },
+  { label: 'My Library', href: '/library', icon: LibraryIcon, disabled: true },
 ];
 
 export const SETTINGS_ITEM: NavItem[] = [
-  { label: 'Settings', href: '/settings', icon: SettingsIcon },
+  { label: 'Settings', href: '/settings', icon: SettingsIcon, disabled: true },
 ];
 
 export function SidebarBrand({ collapsed }: { collapsed: boolean }) {

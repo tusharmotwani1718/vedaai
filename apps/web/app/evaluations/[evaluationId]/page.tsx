@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import type { EvaluationPayload } from '@vedaai/shared';
 
 import { AppShell } from '@/components/layout/AppShell';
 import { EvaluationScreen } from '@/components/evaluation/EvaluationScreen';
+import { MessageScreen } from '@/components/ui/MessageScreen';
 import { ApiError, getEvaluation } from '@/lib/api';
 
 /**
@@ -43,17 +43,12 @@ export default async function EvaluationPage({
  */
 function Unavailable({ message }: { message: string }) {
   return (
-    <div className="bg-surface rounded-panel min-h-125 flex h-full flex-col items-center justify-center px-6 text-center">
-      <h1 className="text-ink text-2xl font-bold tracking-[-0.04em]">
-        This evaluation isn&rsquo;t available
-      </h1>
-      <p className="text-ink-muted text-lead max-w-md mt-2">{message}</p>
-      <Link
-        href="/"
-        className="bg-surface-dark text-ink-inverse mt-7 flex h-[3.4rem] items-center rounded-full px-8 text-[1.05rem] font-semibold hover:brightness-125"
-      >
-        Upload again
-      </Link>
-    </div>
+    <MessageScreen
+      title="This evaluation is no longer available"
+      actionHref="/"
+      actionLabel="Upload again"
+    >
+      {message}
+    </MessageScreen>
   );
 }
