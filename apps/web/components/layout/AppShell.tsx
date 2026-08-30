@@ -30,7 +30,7 @@ export function AppShell({
       <Sidebar activeHref={activeHref} />
 
       <div className="flex min-w-0 flex-1 flex-col gap-3 lg:gap-5">
-        <MobileTopBar userName={userName} />
+        <MobileTopBar userName={userName} activeHref={activeHref} />
         <TopBar section={section} userName={userName} />
 
         <main className="min-h-0 flex-1 lg:overflow-y-auto">{children}</main>

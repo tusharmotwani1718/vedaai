@@ -12,35 +12,51 @@ export interface NavItem {
  *
  * Shared by the main nav and the lone Settings row so both stay identical when
  * the row styling changes.
+ *
+ * Collapsed, each row becomes a centred square tile. The label does not
+ * disappear so much as move: it becomes the accessible name and the tooltip,
+ * because an icon on its own tells a screen reader nothing and tells a new user
+ * very little.
  */
 export function SidebarNav({
   items,
   activeHref,
+  collapsed = false,
   className = '',
+  onNavigate,
 }: {
   items: NavItem[];
   activeHref: string;
+  collapsed?: boolean;
   className?: string;
+  /** Lets the mobile drawer close itself when a link is followed. */
+  onNavigate?: () => void;
 }) {
   return (
     <nav className={className}>
-      <ul className="flex flex-col gap-1">
+      <ul className={`flex flex-col ${collapsed ? 'items-center gap-2' : 'gap-1'}`}>
         {items.map(({ label, href, icon: IconComponent }) => {
           const isActive = href === activeHref;
           return (
             <li key={href}>
               <Link
                 href={href}
+                onClick={onNavigate}
                 aria-current={isActive ? 'page' : undefined}
+                aria-label={collapsed ? label : undefined}
+                title={collapsed ? label : undefined}
                 className={[
-                  'flex h-[2.9rem] items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors',
+                  'flex items-center transition-colors',
+                  collapsed
+                    ? 'size-8 justify-center rounded-[0.6rem]'
+                    : 'h-[2.9rem] gap-3 rounded-xl px-3 text-[0.95rem]',
                   isActive
                     ? 'bg-surface-sunken text-ink font-semibold'
                     : 'text-ink-muted hover:bg-surface-sunken/60 hover:text-ink font-medium',
                 ].join(' ')}
               >
                 <IconComponent className="size-[1.15rem] shrink-0" />
-                {label}
+                {!collapsed && label}
               </Link>
             </li>
           );

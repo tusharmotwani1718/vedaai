@@ -105,7 +105,7 @@ function AiFeedback({ question }: { question: QuestionPayload }) {
     review.feedback ??
     (review.status === 'unattempted'
       ? 'No answer for this question was found on the sheet.'
-      : 'Not marked yet — AI marking is not switched on for this paper.');
+      : 'AI marking not available yet.');
 
   return (
     <div className="bg-surface-chip mt-3 rounded-xl p-3.5">

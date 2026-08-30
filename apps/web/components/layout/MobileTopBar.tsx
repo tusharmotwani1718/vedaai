@@ -1,12 +1,28 @@
+'use client';
+
 import Image from 'next/image';
+import { useState } from 'react';
 
 import { ArrowLeftIcon, BellIcon, MenuIcon } from '@/components/ui/icons';
+
+import { MobileNav } from './MobileNav';
 
 /**
  * Mobile header: back arrow and wordmark on the left, notifications, avatar and
  * the menu trigger on the right. Replaced by Sidebar + TopBar from `lg` up.
+ *
+ * The menu button opens the navigation drawer, and the open state lives here
+ * rather than in AppShell because nothing else on the page depends on it.
  */
-export function MobileTopBar({ userName }: { userName: string }) {
+export function MobileTopBar({
+  userName,
+  activeHref = '/',
+}: {
+  userName: string;
+  activeHref?: string;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   const initials = userName
     .split(' ')
     .map((part) => part[0])
@@ -57,11 +73,16 @@ export function MobileTopBar({ userName }: { userName: string }) {
         <button
           type="button"
           aria-label="Open menu"
-          className="text-ink grid size-9 place-items-center rounded-full"
+          aria-expanded={menuOpen}
+          aria-haspopup="dialog"
+          onClick={() => setMenuOpen(true)}
+          className="text-ink hover:bg-surface-sunken grid size-9 cursor-pointer place-items-center rounded-full transition-colors"
         >
           <MenuIcon className="size-[1.35rem]" />
         </button>
       </div>
+
+      <MobileNav open={menuOpen} activeHref={activeHref} onClose={() => setMenuOpen(false)} />
     </header>
   );
 }
