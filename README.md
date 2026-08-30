@@ -35,7 +35,8 @@ surfaces as a compile error on the other side.
 
 ```bash
 bun install
-cp .env.example .env     # optional; the defaults below are already baked in
+cp .env.example .env      # add MISTRAL_API_KEY
+# Get your MISTRAL_API_KEY at https://admin.mistral.ai/organization
 bun run dev              # starts the API and the web app together
 ```
 
