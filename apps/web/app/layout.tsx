@@ -17,6 +17,9 @@ const bricolage = Bricolage_Grotesque({
 export const metadata: Metadata = {
   title: 'VedaAI',
   description: 'Map student answers to question papers.',
+
+
+  icons: { icon: '/assets/veda-ai-logo.png' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
