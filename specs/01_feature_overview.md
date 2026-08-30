@@ -63,7 +63,6 @@ How it works:
 - There are multiple async processes in the evaluation process. They include:
     1. OCR
     2. LLM Transformation
-    3. Answer mapping
     4. AI review and score for mapped pairs.
 
 - The web socket connection will be used to send the progress updates to the client at the time of different ongoing processes.
@@ -71,7 +70,6 @@ How it works:
 - The main socket events should be at:
     1. OCR as 'Extracting Documents'
     2. LLM Transformation as 'Transforming Documents'
-    3. Answer mapping as 'Mapping Answers'
     4. AI review and score as 'Reviewing Answers with AI'
 
 - The socket connection must be disposed off at the end of the evaluation process.
@@ -79,3 +77,9 @@ How it works:
 - Use socket.io library for the web socket connection.
 
 *Remember we do not need a progress bar in the ui, just the current process state update*
+
+
+- The socket id can change in between the evaluation is in progress, so a blinked user cannot see the events as they go to void because socket id reloaded. So, use upload id or evaluation id as socket id so even a reconnected user can see the events.
+
+
+- Fallback to static extraction if socket connection fails.
