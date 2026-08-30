@@ -77,3 +77,5 @@ How it works:
 - The socket connection must be disposed off at the end of the evaluation process.
 
 - Use socket.io library for the web socket connection.
+
+*Remember we do not need a progress bar in the ui, just the current process state update*
