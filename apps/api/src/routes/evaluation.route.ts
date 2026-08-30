@@ -4,8 +4,10 @@ import { MAX_UPLOAD_BYTES, type ApiSuccess } from '@vedaai/shared';
 
 import { HttpError } from '../http-error';
 import {
+  collectAnswersToMark,
   extractOcr,
   mapAnswersToQuestions,
+  markAnswers,
   transformOcrOutput,
   transformOcrOutputForAnswerSheet,
   SUPPORTED_UPLOAD_MIME_TYPES,
@@ -122,6 +124,14 @@ evaluationRouter.post(
 
     const mapping = mapAnswersToQuestions(sheetResult, paperResult.extraction);
 
+    // Marking runs last and cannot fail the request. Everything above it - the
+    // questions, the answers, the highlight regions - is the feature; a score
+    // sits on top, so an unavailable or rate-limited marking model costs the
+    // teacher some numbers rather than the whole upload.
+    const marking = await markAnswers(
+      collectAnswersToMark(paperResult.extraction, sheetResult, mapping),
+    );
+
     const evaluation = createEvaluation({
       questionPaper: {
         document: {
@@ -142,6 +152,7 @@ evaluationRouter.post(
         result: sheetResult,
       },
       mapping,
+      marking,
     });
 
     const body: ApiSuccess<EvaluationPayload> = {

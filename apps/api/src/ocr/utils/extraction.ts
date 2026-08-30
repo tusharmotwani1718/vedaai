@@ -23,7 +23,11 @@ import {
   setCachedQuestionPaper,
   type TransformDocumentType,
 } from '../cache/ocr-transform.cache';
-import { mistraAIAnswerSheetTransformPrompt, mistraAIOcrTransformPrompt } from '../lib/constants';
+import {
+  mistraAIAnswerMarkingPrompt,
+  mistraAIAnswerSheetTransformPrompt,
+  mistraAIOcrTransformPrompt,
+} from '../lib/constants';
 import { deriveAttemptRegions, type AttemptRegion } from '../lib/regions/derive-regions';
 import {
   buildPaperLabelIndex,
@@ -589,4 +593,274 @@ export function mapAnswersToQuestions(
   );
 
   return { resolution, byQuestionId };
+}
+
+// ============================================================
+// AI marking
+// ============================================================
+//
+// The third LLM call in the pipeline, and the smallest. The two transforms
+// above restructure a whole document; this one is shown question/answer pairs
+// and returns a number for each, which is why it runs on a small model.
+//
+// It is the only optional step. Mapping and highlighting are the feature; a
+// score sits on top, so a marking failure degrades to "not marked" rather than
+// failing the upload.
+
+/** Overridable per environment, like the other two models. */
+export const MARKING_MODEL = process.env.MISTRAL_MARKING_MODEL ?? 'mistral-small-latest';
+
+/**
+ * How many answers go into one call.
+ *
+ * Not one call per question: the system prompt is re-sent every time, so a
+ * 30-question paper would pay for it thirty times over and take thirty chances
+ * on a rate limit. Not one call for the whole paper either — a small model
+ * marking an unbounded list starts dropping and transposing entries, and a
+ * single failure would leave the entire paper unmarked.
+ *
+ * Twelve means a typical paper is a single call, a long one is a handful, and
+ * each call stays short enough to stay accurate.
+ */
+const QUESTIONS_PER_CALL = 12;
+
+/** Batches in flight at once. Papers rarely need more than a few. */
+const MARKING_CONCURRENCY = 3;
+
+/**
+ * The response: one entry per item, each echoing the ref it was given.
+ *
+ * `ref` is what makes the join safe. Scores are matched back by it rather than
+ * by array position, so a model that drops or reorders an entry costs us that
+ * one mark instead of silently shifting every later score onto the wrong
+ * question.
+ */
+const MarkedAnswersSchema = z.object({
+  marks: z.array(
+    z.object({
+      ref: z.number(),
+      awardedMarks: z.number(),
+    }),
+  ),
+});
+
+const ANSWER_MARKING = {
+  prompt: mistraAIAnswerMarkingPrompt,
+  schema: MarkedAnswersSchema,
+} as const;
+
+/** One question, its worth, and what the student actually wrote about it. */
+export interface AnswerToMark {
+  questionId: string;
+  questionText: string;
+  maxMarks: number;
+  /** The answer as transcribed — every attempt that resolved to this question. */
+  answerText: string;
+}
+
+export interface AnswerMarkingResult {
+  /** questionId -> awarded marks. A question absent here was not marked. */
+  byQuestionId: Map<string, number>;
+  /** Questions sent to the model that came back without a usable score. */
+  unmarked: string[];
+  /** Recorded so the payload can say what produced the numbers. */
+  model: string;
+}
+
+/**
+ * Forces a raw model score into a mark a teacher could actually be shown.
+ *
+ * The schema can say "a number"; it cannot say "a whole number within this
+ * particular question's maximum". Models do return 7 out of 5, negatives and
+ * half marks, and any of those rendered beside a student's name would be
+ * nonsense — so the range is imposed here rather than trusted.
+ *
+ * Returns null for a score that cannot be salvaged, which the caller treats as
+ * unmarked rather than as a zero.
+ */
+export function clampMarks(raw: number, maxMarks: number): number | null {
+  if (!Number.isFinite(raw)) return null;
+  return Math.max(0, Math.min(maxMarks, Math.round(raw)));
+}
+
+/** Splits a list into consecutive runs of at most `size`. */
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/**
+ * Marks one batch of answers.
+ *
+ * Returns only the entries that came back cleanly and matched a ref we issued;
+ * anything else is simply absent, and the caller reports it as unmarked.
+ */
+async function markBatch(batch: AnswerToMark[]): Promise<Map<string, number>> {
+  // Refs are positions within this batch, so they stay small however long the
+  // paper is. The model never sees a questionId.
+  const byRef = new Map(batch.map((item, index) => [index + 1, item]));
+
+  const items = batch.map((item, index) => ({
+    ref: index + 1,
+    question: item.questionText,
+    maxMarks: item.maxMarks,
+    answer: item.answerText,
+  }));
+
+  let response;
+  try {
+    response = await getClient().chat.parse({
+      model: MARKING_MODEL,
+      messages: [
+        { role: 'system', content: ANSWER_MARKING.prompt },
+        { role: 'user', content: `Mark these ${items.length} items: ${JSON.stringify(items)}` },
+      ],
+      responseFormat: ANSWER_MARKING.schema,
+      // Marking the same script twice should not produce two different totals.
+      temperature: 0,
+    });
+  } catch (err) {
+    throw describeSdkError(MARKING_MODEL, err);
+  }
+
+  const message = response.choices?.[0]?.message;
+  if (!message) {
+    throw new Error('Marking LLM returned no choices');
+  }
+
+  const candidate = message.parsed ?? JSON.parse(messageContentToString(message.content));
+  const { marks } = ANSWER_MARKING.schema.parse(stripNulls(candidate));
+
+  return joinScores(byRef, marks);
+}
+
+/**
+ * Matches returned scores back onto the questions they belong to.
+ *
+ * The whole reason marking batches at all safely. The model is asked for one
+ * entry per item, but a small model will sometimes drop one, repeat one, or
+ * hand them back out of order. Matching on the echoed `ref` rather than on
+ * array position means every one of those costs a single mark, where zipping by
+ * index would shift every later score onto the wrong question - wrong marks
+ * that look entirely plausible.
+ *
+ * Anything that cannot be matched with certainty is left out, and the caller
+ * reports that question as unmarked.
+ */
+export function joinScores(
+  byRef: Map<number, AnswerToMark>,
+  entries: Array<{ ref: number; awardedMarks: number }>,
+): Map<string, number> {
+  const scored = new Map<string, number>();
+
+  for (const entry of entries) {
+    const item = byRef.get(entry.ref);
+    // A ref we never issued, or one already answered: drop it rather than guess
+    // which question it belongs to.
+    if (item === undefined || scored.has(item.questionId)) continue;
+
+    const value = clampMarks(entry.awardedMarks, item.maxMarks);
+    if (value !== null) scored.set(item.questionId, value);
+  }
+
+  return scored;
+}
+
+/**
+ * Marks every answer, a batch at a time.
+ *
+ * Never throws. A batch that fails, or an entry the model drops, leaves those
+ * questions unmarked — which the UI shows as a dash. That is the honest
+ * outcome: the alternative is either failing an upload whose mapping is
+ * perfectly good, or inventing numbers to fill the gaps.
+ */
+export async function markAnswers(items: AnswerToMark[]): Promise<AnswerMarkingResult> {
+  const byQuestionId = new Map<string, number>();
+  const batches = chunk(items, QUESTIONS_PER_CALL);
+
+  let cursor = 0;
+  // build batches and loop over them
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const index = cursor++;
+      const batch = batches[index];
+      if (batch === undefined) return;
+
+      try {
+        for (const [questionId, marks] of await markBatch(batch)) {
+          byQuestionId.set(questionId, marks);
+        }
+      } catch (err) {
+        const label = `batch ${index + 1}/${batches.length}`;
+        console.warn(`[marking] ${label} failed:`, (err as Error).message);
+      }
+    }
+  };
+
+  // resolve multiple batch calls in parallel
+  await Promise.all(
+    Array.from({ length: Math.min(MARKING_CONCURRENCY, batches.length) }, () => worker()),
+  );
+
+  const unmarked = items
+    .filter((item) => !byQuestionId.has(item.questionId))
+    .map((item) => item.questionId);
+
+  return { byQuestionId, unmarked, model: MARKING_MODEL };
+}
+
+/**
+ * Works out which questions can be marked, and gathers the text for each.
+ *
+ * Three kinds of question are left out, none of them a failure — all three end
+ * up showing a dash rather than a score:
+ *
+ *  - nothing on the sheet resolved to it, so there is no answer to judge;
+ *  - the paper states no marks for it, so there is no maximum to score against;
+ *  - the resolved attempts carry no readable text.
+ *
+ * An answer split across a page break resolves to several attempts; they are
+ * joined in sheet order so the model marks the whole answer rather than the
+ * fragment that happened to come first.
+ */
+export function collectAnswersToMark(
+  paper: LlmQuestionPaperExtraction,
+  answer: AnswerSheetTransformResult,
+  mapping: AnswerMappingResult,
+): AnswerToMark[] {
+  const textByAttemptId = new Map<string, string>();
+  for (const position of answer.validation.sheetOrder) {
+    const attempt = answer.extraction.attempts[position.index];
+    if (attempt !== undefined) textByAttemptId.set(position.attemptId, attempt.text);
+  }
+
+  const items: AnswerToMark[] = [];
+
+  for (const section of paper.sections) {
+    for (const question of section.questions) {
+      const questionId = `${section.sectionId}.${question.displayLabel}`;
+      const resolved = mapping.byQuestionId.get(questionId);
+
+      const maxMarks = question.marks ?? section.marksPerQuestion;
+      if (resolved === undefined || maxMarks === undefined || maxMarks <= 0) continue;
+
+      const answerText = resolved.attemptIds
+        .map((attemptId) => textByAttemptId.get(attemptId) ?? '')
+        .join('\n')
+        .trim();
+
+      if (answerText === '') continue;
+
+      // Parts belong to the question the student had to answer, so the model
+      // sees them too — marking "Q3" without its (a) and (b) would be marking a
+      // different question from the one on the paper.
+      const parts = (question.parts ?? []).map((part) => `${part.label} ${part.text}`);
+      const questionText = [question.text, ...parts].join('\n');
+
+      items.push({ questionId, questionText, maxMarks, answerText });
+    }
+  }
+
+  return items;
 }

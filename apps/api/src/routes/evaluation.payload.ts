@@ -39,20 +39,21 @@ export type {
 /**
  * The AI review of one question.
  *
- * There is no marking model yet, so this reports what is actually known rather
- * than guessing. A question nothing on the sheet answers is genuinely worth
- * zero and is reported as such — that is the resolver's conclusion, not a
- * placeholder. Everything else is `pending`: the pipeline can say the answer
- * exists but nothing has judged it, and a fabricated score is precisely the
- * kind of number a teacher would act on.
+ * Only a question the model actually scored carries a number. Everything else
+ * reports no score, and the pill renders a dash: a question nobody answered and
+ * a question the model failed on are both "not judged", and printing 0 for
+ * either would assert the student earned nothing when in fact nothing looked.
  *
- * When the marking model lands, only this function changes.
+ * A marked answer genuinely worth zero is a different thing, and does show 0.
  */
-function reviewOf(answered: boolean): QuestionReview {
+function reviewOf(answered: boolean, awardedMarks: number | undefined): QuestionReview {
   if (!answered) {
-    return { awardedMarks: 0, feedback: null, status: 'unattempted' };
+    return { awardedMarks: null, feedback: null, status: 'unattempted' };
   }
-  return { awardedMarks: null, feedback: null, status: 'pending' };
+  if (awardedMarks === undefined) {
+    return { awardedMarks: null, feedback: null, status: 'not-marked' };
+  }
+  return { awardedMarks, feedback: null, status: 'reviewed' };
 }
 
 function documentPayload(
@@ -75,7 +76,7 @@ function documentPayload(
 }
 
 export function toEvaluationPayload(evaluation: Evaluation): EvaluationPayload {
-  const { questionPaper, answerSheet, mapping } = evaluation;
+  const { questionPaper, answerSheet, mapping, marking } = evaluation;
   const paper = questionPaper.result.extraction;
 
   // Map -> plain object, so the mapping survives JSON.
@@ -108,7 +109,7 @@ export function toEvaluationPayload(evaluation: Evaluation): EvaluationPayload {
         })),
         isOptionalWith: q.isOptionalWith ?? [],
         answered,
-        review: reviewOf(answered),
+        review: reviewOf(answered, marking.byQuestionId.get(questionId)),
       };
     }),
   }));

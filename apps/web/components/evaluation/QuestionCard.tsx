@@ -55,7 +55,7 @@ export function QuestionCard({
           {index}
         </span>
 
-        <span className="text-ink order-last w-full text-[0.95rem] leading-snug lg:order-0 lg:min-w-0 lg:flex-1">
+        <span className="text-ink lg:order-0 order-last w-full text-[0.95rem] leading-snug lg:min-w-0 lg:flex-1">
           {question.text}
         </span>
 
@@ -94,18 +94,15 @@ export function QuestionCard({
 /**
  * The expanded panel.
  *
- * With no marking model wired up there is nothing to quote, so this says so
- * plainly instead of showing an empty box — the panel is here to hold the real
- * feedback the moment there is any.
+ * The marking call returns a score and nothing else by design, so there is no
+ * written feedback to quote yet. Rather than show an empty box, each state says
+ * what is actually known - and a scored question reports its score rather than
+ * claiming nothing has looked at it.
  */
 function AiFeedback({ question }: { question: QuestionPayload }) {
   const { review } = question;
 
-  const body =
-    review.feedback ??
-    (review.status === 'unattempted'
-      ? 'No answer for this question was found on the sheet.'
-      : 'AI marking not available yet.');
+  const body = review.feedback ?? placeholderFor(question);
 
   return (
     <div className="bg-surface-chip mt-3 rounded-xl p-3.5">
@@ -119,4 +116,18 @@ function AiFeedback({ question }: { question: QuestionPayload }) {
       </p>
     </div>
   );
+}
+
+/** What the panel says when there is no written feedback to show. */
+function placeholderFor({ review, marks }: QuestionPayload): string {
+  if (review.status === 'unattempted') {
+    return 'No answer for this question was found on the sheet.';
+  }
+
+  if (review.status === 'reviewed' && review.awardedMarks !== null) {
+    const outOf = marks === undefined ? '' : ` out of ${marks}`;
+    return `AI marking scored this ${review.awardedMarks}${outOf}. Written feedback is not generated yet.`;
+  }
+
+  return 'Not marked - AI marking did not return a score for this question.';
 }

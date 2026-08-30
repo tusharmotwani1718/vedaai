@@ -5,6 +5,7 @@ import type { DocumentKind } from '@vedaai/shared';
 import { MemoryCache, type CacheStats } from '../lib/memory-cache';
 import type {
   AnswerMappingResult,
+  AnswerMarkingResult,
   AnswerSheetTransformResult,
   QuestionPaperTransformResult,
 } from '../ocr/utils/extraction';
@@ -41,6 +42,7 @@ export interface Evaluation {
     result: AnswerSheetTransformResult; // transformed result after llm, ocr, validations and geometry
   };
   mapping: AnswerMappingResult; // mapping of question-answers
+  marking: AnswerMarkingResult; // ai-awarded marks, keyed by questionId
 }
 
 /**

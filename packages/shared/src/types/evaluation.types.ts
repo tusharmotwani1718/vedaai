@@ -52,28 +52,35 @@ export interface QuestionAnswer {
 }
 
 /**
- * How far the AI review of one answer has got.
+ * Why a question does or does not carry a score.
  *
- * `pending` is the only status a real answer can currently have: no marking
- * model exists yet, so nothing has scored it. `unattempted` is not a placeholder
- * — the resolver already knows for certain that nothing on the sheet answers the
- * question, and zero is the honest score for that.
+ * Only `reviewed` has a number. Both other states render as a dash rather than
+ * a zero — a question nobody answered and a question the model failed on are
+ * both "no score", and showing 0 would assert the student earned nothing when
+ * in fact nothing was judged.
  */
-export type ReviewStatus = 'pending' | 'reviewed' | 'unattempted';
+export type ReviewStatus =
+  /** The marking model returned a score for this answer. */
+  | 'reviewed'
+  /** Nothing on the sheet resolved to this question. */
+  | 'unattempted'
+  /** Answered, but no score came back — skipped, or the model failed on it. */
+  | 'not-marked';
 
 /**
  * The AI marking of a single question.
  *
- * Deliberately nullable rather than absent: the shape is part of the contract
- * now so the UI is built against its finished form, and the marking model can
- * be dropped in behind it without another payload change. Anything that renders
- * `awardedMarks` must handle `null` — a pending review has no score, and
- * inventing one would be a number a teacher could act on.
+ * `awardedMarks` is non-null exactly when `status` is `reviewed`; anything else
+ * has no score to show. Renderers must handle `null` rather than defaulting it
+ * to 0, because that zero would be a number a teacher could act on.
  */
 export interface QuestionReview {
-  /** Marks awarded, out of the question's own `marks`. `null` while pending. */
+  /** Marks awarded out of the question's own `marks`, or `null` if unscored. */
   awardedMarks: number | null;
-  /** A sentence or two explaining the score. `null` while pending. */
+  /**
+   * Reserved for written feedback. Always `null` today: the marking call
+   * returns a score and nothing else, by design.
+   */
   feedback: string | null;
   status: ReviewStatus;
 }

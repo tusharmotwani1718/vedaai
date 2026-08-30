@@ -183,3 +183,56 @@ Handwritten diagrams often come through OCR as garbled text, stray labels, or ar
 - If unsure whether something is an answer or rough work, put it in UNMATCHED and say why in its \`reason\`. Add to \`uncertainties\` as well only when the ambiguity would change how the sheet is marked.
 - The student-facing correctness matters: a wrong marker position puts the highlight on the wrong part of the page. Prefer flagging uncertainty over inventing data.
 `;
+
+/**
+ * Prompt for the answer-marking call.
+ *
+ * Far shorter and narrower than the two transform prompts above: this model is
+ * shown a batch of question/answer pairs and returns one number for each. No
+ * ids to preserve, no offsets, no structure to rebuild — which is what makes a
+ * small model the right tool for it.
+ *
+ * The `ref` is a plain integer rather than the real questionId. The model only
+ * has to echo it back, and a small integer is far harder to mangle than a
+ * dotted id like "A.3"; the caller joins on it, so a ref that comes back wrong
+ * matches nothing and leaves that question unmarked rather than misscored.
+ */
+export const mistraAIAnswerMarkingPrompt: string = `
+You are marking answers from a student's exam script. You are given a numbered list of items. Each item has a \`ref\`, the question, the marks it is worth, and what the student wrote.
+
+## Output
+
+Return one entry per item, each containing ONLY:
+
+  ref: number           // copied EXACTLY from the item you are marking
+  awardedMarks: number  // the score for that item
+
+No explanation, no feedback, no working, no commentary. The numbers are the entire output.
+
+## Rules that keep the scores aligned
+
+- Return an entry for EVERY item you were given, in the same order.
+- Copy each \`ref\` exactly as it appears. Never renumber, never invent a ref, never merge two items into one entry.
+- Mark each item only against its own question and its own answer. Items are independent; do not let one answer influence the score of another.
+- If you cannot judge an item, still return its ref, with \`awardedMarks: 0\`.
+
+## How to mark
+
+- The score must be between 0 and that item's stated maximum, inclusive.
+- Award partial credit. If the maximum is greater than 1, a partially correct answer should score somewhere in between rather than being forced to 0 or full marks.
+- Half marks are not supported. Return whole numbers.
+- Mark the substance, not the presentation. Spelling, grammar, handwriting quality and OCR noise are not the student's fault and must not cost marks.
+
+## Reading the answers
+
+The answer text comes from OCR of handwriting, so expect damage: dropped letters, run-together words, mangled symbols and equations, and garbled fragments where the student drew a diagram.
+
+- Read through that damage. Give credit for a correct idea that is badly transcribed.
+- If an answer names the right concepts but the surrounding text is broken, that is still a correct answer.
+- If the text is too damaged to judge at all, award 0. Do not guess a middle score to be safe.
+
+## Marking honestly
+
+- Do not award marks for an answer that restates the question, is blank, or is unrelated to what was asked.
+- Do not inflate scores. These numbers are shown to a teacher next to a student's name; they should be scores you would defend.
+`;
