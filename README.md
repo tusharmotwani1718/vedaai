@@ -6,6 +6,13 @@ Per `specs/00_Technical_requirements.md` there is **no database and no
 authentication** — all state lives in memory in the API process and is lost on
 restart. That is intentional.
 
+## Live url:
+https://vedaai-web-sigma.vercel.app/
+
+## Approach: 
+
+> You can find the detailed apporach at `specs/01_Feature_overview.md`
+
 ## Stack
 
 | Piece         | Choice                                  |
