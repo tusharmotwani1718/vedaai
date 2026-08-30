@@ -14,6 +14,33 @@ const PHASE_LABELS: Record<EvaluationPhase, string> = {
 };
 
 /**
+ * How full the bar is when each stage BEGINS.
+ *
+ * Derived on the client, because the stages are fixed and the server has
+ * nothing to add: a percentage on the wire would just be this table, sent.
+ *
+ * The steps are spaced by roughly how long each stage takes rather than evenly,
+ * so the bar does not spend a minute on a quarter of its travel and then race
+ * through the rest. On a typical paper OCR runs ~25s, the transforms ~40s, and
+ * the AI review ~10s; mapping is instant, so its step exists only to give the
+ * jump somewhere to land.
+ *
+ * Nothing here reaches 100. The bar is full when the upload is finished, not
+ * when its last stage starts - a bar sitting at 100% for the ten seconds the
+ * review is still running would be telling the teacher it is done when it is
+ * not.
+ */
+const PHASE_PROGRESS: Record<EvaluationPhase, number> = {
+  ocr: 15,
+  transform: 45,
+  mapping: 80,
+  marking: 85,
+};
+
+/** Shown while the socket is connecting, before any stage has been reported. */
+const PROGRESS_STARTED = 5;
+
+/**
  * The waiting screen, shown for the whole life of `POST /api/evaluations`.
  *
  * That request runs two OCR calls and two LLM calls before it resolves, so this
@@ -22,12 +49,24 @@ const PHASE_LABELS: Record<EvaluationPhase, string> = {
  * back to the reference's own wording until the first stage arrives, and stays
  * there for the whole run if the socket never connects.
  *
- * Still no bar, per the reference and the spec: the stage is the progress.
+ * The bar is a deliberate addition to the reference, which shows none. It is
+ * driven entirely by the stage events - it never creeps on a timer, so it only
+ * ever moves when the pipeline has actually moved. When the socket cannot
+ * connect it holds at its starting sliver rather than animating a lie.
  *
  * Unlike the upload screen, this one sits on its own white card filling the
  * content area (`specs/design/design-reference/extracting-state-03.png`).
  */
-export function ExtractingState({ phase }: { phase?: EvaluationPhase | null }) {
+export function ExtractingState({
+  phase,
+  complete = false,
+}: {
+  phase?: EvaluationPhase | null;
+  /** Set once the upload has answered, so the bar can finish before it leaves. */
+  complete?: boolean;
+}) {
+  const percent = complete ? 100 : phase == null ? PROGRESS_STARTED : PHASE_PROGRESS[phase];
+
   return (
     <div
       className="bg-surface rounded-panel min-h-125 flex h-full flex-col items-center justify-center px-6 text-center"
@@ -39,7 +78,23 @@ export function ExtractingState({ phase }: { phase?: EvaluationPhase | null }) {
       <h1 className="text-ink mt-7 text-2xl font-bold tracking-[-0.04em]">
         {phase == null ? <>Extracting&hellip;</> : PHASE_LABELS[phase]}
       </h1>
-      <p className="text-ink-muted text-lead mt-2">This may take a while</p>
+      <p className="text-ink-muted text-lead mt-2">This may take a while. Please hold on the screen.</p>
+
+      {/*
+       * Hidden from assistive technology on purpose. It carries exactly the
+       * same information as the heading above it, which is already inside a
+       * live region - exposing it as a progressbar too would announce every
+       * stage twice, once as words and once as a number.
+       */}
+      <div
+        aria-hidden="true"
+        className="bg-surface-sunken mt-7 h-1.5 w-full max-w-72 overflow-hidden rounded-full"
+      >
+        <div
+          className="bg-brand h-full rounded-full transition-[width] duration-500 ease-out"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
     </div>
   );
 }

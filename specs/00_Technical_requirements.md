@@ -8,7 +8,8 @@ Architecture - (monorepo)
 - Frontend: Next + TypeScript + Tailwind + Figma File reference provided (necessary and strict).
 - DB - No db, no auth, everything maintained in-memory
 - Backend: TypeScript
-- package maanger - Bun
+- package manager - Bun
+- Socket.io for realtime updates
 
 The code written should be clean, standard, maintainable and easy to understand and manage.
 Proper comments should be written whereever required.

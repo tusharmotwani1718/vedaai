@@ -33,6 +33,7 @@ export function UploadScreen() {
   const [answerSheet, setAnswerSheet] = useState<File | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [phase, setPhase] = useState<EvaluationPhase | null>(null);
+  const [complete, setComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const ready = questionPaper !== null && answerSheet !== null;
@@ -61,6 +62,7 @@ export function UploadScreen() {
     setExtracting(true);
     setError(null);
     setPhase(null);
+    setComplete(false);
 
     // The id is minted here, before anything is sent, so the socket can be
     // listening for this upload by the time the server starts reporting on it.
@@ -74,6 +76,12 @@ export function UploadScreen() {
 
       const evaluation = await createEvaluation({ questionPaper, answerSheet, uploadId });
 
+      // The last stage only takes the bar to 85%; the upload answering is what
+      // finishes it. The next route fetches on the server, so this screen stays
+      // up for a moment yet - long enough for the bar to arrive rather than
+      // being cut off short of the end.
+      setComplete(true);
+
       // Deliberately stay in the extracting state through the navigation: the
       // next route fetches on the server, and dropping back to the form here
       // would flash the upload screen between the two.
@@ -81,6 +89,7 @@ export function UploadScreen() {
     } catch (err) {
       setExtracting(false);
       setPhase(null);
+      setComplete(false);
       setError(
         err instanceof ApiError
           ? err.message
@@ -94,7 +103,7 @@ export function UploadScreen() {
     }
   }
 
-  if (extracting) return <ExtractingState phase={phase} />;
+  if (extracting) return <ExtractingState phase={phase} complete={complete} />;
 
   return (
     <div className="max-w-248 mx-auto flex w-full flex-col px-1 py-0 lg:justify-center lg:py-6">

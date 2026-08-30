@@ -76,7 +76,7 @@ How it works:
 
 - Use socket.io library for the web socket connection.
 
-*Remember we do not need a progress bar in the ui, just the current process state update*
+*Since all the socket events are predefined and fixed, we can have a progress bar too without including any server code. Just on the client, the progress bar can be updated as per the socket event.*
 
 
 - The socket id can change in between the evaluation is in progress, so a blinked user cannot see the events as they go to void because socket id reloaded. So, use upload id or evaluation id as socket id so even a reconnected user can see the events.
