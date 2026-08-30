@@ -51,5 +51,5 @@ How it works:
 - Another extreme is to give all the evaluated question-answers pair to the llm in one pass and get the scores. But there are very chances for a mini model to get confused and hallucinate over the response with the order, marking scheme, reviewing score etc.
 - A good way can be to give the question-answers pair to the llm in a batch and get the scores and then calculate the final score. Even if we decide to give 12 questions to the llm at a time, the number of calls will be 3 for a 30 question paper.
 - Maxium papers could get evaluated in a single call with a good batch size. That way, we can reduce the llm calls and get a reliable output too.
-- The llm should be expected to return the numeric score for each question, and no comments, just the numeric score for now.
+- The llm should be expected to return the numeric score for each question, and a one liner review/comment for each reviewed answer. The review statement should strictly be of 2 lines max, not more than that. A failed review can have the statement as "AI failed to review this answer".
 - The resolved answers should show the reviewed scores along with respective question in the questions list. While the unattempted/unresolved answers should say "-" instead of 0.
