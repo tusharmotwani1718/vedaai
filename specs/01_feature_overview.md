@@ -53,3 +53,27 @@ How it works:
 - Maxium papers could get evaluated in a single call with a good batch size. That way, we can reduce the llm calls and get a reliable output too.
 - The llm should be expected to return the numeric score for each question, and a one liner review/comment for each reviewed answer. The review statement should strictly be of 2 lines max, not more than that. A failed review can have the statement as "AI failed to review this answer".
 - The resolved answers should show the reviewed scores along with respective question in the questions list. While the unattempted/unresolved answers should say "-" instead of 0.
+
+
+
+## Sockets for progress update:
+
+- We also need a web socket connection to provide real time state update in the process of evaluation to the client.
+
+- There are multiple async processes in the evaluation process. They include:
+    1. OCR
+    2. LLM Transformation
+    3. Answer mapping
+    4. AI review and score for mapped pairs.
+
+- The web socket connection will be used to send the progress updates to the client at the time of different ongoing processes.
+
+- The main socket events should be at:
+    1. OCR as 'Extracting Documents'
+    2. LLM Transformation as 'Transforming Documents'
+    3. Answer mapping as 'Mapping Answers'
+    4. AI review and score as 'Reviewing Answers with AI'
+
+- The socket connection must be disposed off at the end of the evaluation process.
+
+- Use socket.io library for the web socket connection.
