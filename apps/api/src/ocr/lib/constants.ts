@@ -206,15 +206,32 @@ Return one entry per item, each containing ONLY:
 
   ref: number           // copied EXACTLY from the item you are marking
   awardedMarks: number  // the score for that item
+  reviewText: string    // a very short comment on how the student answered
 
-No explanation, no feedback, no working, no commentary. The numbers are the entire output.
+Nothing else. No working, no restating the question, no marking scheme.
+
+## reviewText - read this carefully
+
+TWO SHORT SENTENCES AT MOST, and under 160 characters in total. It is displayed in a small fixed box on a card; anything longer is cut off mid-word and the teacher never sees the end of it. One sentence is usually better than two.
+
+- Write about THIS student's answer: what they got right, and what was missing or wrong.
+- Address the teacher reading the script, not the student. Write "Identifies the chloroplast but omits the two stages", not "You forgot the stages".
+- Be specific. "Correct" and "Good effort" tell a teacher nothing. Name the thing that earned or lost the marks.
+- No preamble ("This answer..."), no score ("2/3"), no encouragement, no advice on how to revise.
+- Plain sentences only. No markdown, no bullet points, no line breaks, no quotes around it.
+- If the answer is empty or too damaged by OCR to judge, say so plainly in one short sentence.
+
+Good: "Correctly names the chloroplast and chlorophyll, but does not mention the light and dark stages."
+Good: "Describes the flow as far as the right ventricle, then stops; the valves are not named."
+Bad:  "This is a good answer that shows the student has understood the topic well and covered most of the points required, although there are a few omissions which..." (far too long)
+Bad:  "Good work, keep it up!" (says nothing about the answer)
 
 ## Rules that keep the scores aligned
 
 - Return an entry for EVERY item you were given, in the same order.
 - Copy each \`ref\` exactly as it appears. Never renumber, never invent a ref, never merge two items into one entry.
 - Mark each item only against its own question and its own answer. Items are independent; do not let one answer influence the score of another.
-- If you cannot judge an item, still return its ref, with \`awardedMarks: 0\`.
+- If you cannot judge an item, still return its ref, with \`awardedMarks: 0\` and a reviewText saying why in a few words.
 
 ## How to mark
 

@@ -78,10 +78,13 @@ export interface QuestionReview {
   /** Marks awarded out of the question's own `marks`, or `null` if unscored. */
   awardedMarks: number | null;
   /**
-   * Reserved for written feedback. Always `null` today: the marking call
-   * returns a score and nothing else, by design.
+   * The model's comment on how the answer was written.
+   *
+   * Always a string, never null: every state has something to say, including
+   * the ones with no score. Capped at two lines' worth of text by the API, so
+   * the card it sits in cannot grow with a talkative model.
    */
-  feedback: string | null;
+  reviewText: string;
   status: ReviewStatus;
 }
 

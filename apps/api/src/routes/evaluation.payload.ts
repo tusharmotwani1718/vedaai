@@ -8,6 +8,7 @@ import type {
   SectionPayload,
 } from '@vedaai/shared';
 
+import { REVIEW_FAILED, type MarkedAnswer } from '../ocr/utils/extraction';
 import type { Evaluation } from '../store/evaluation.store';
 
 /**
@@ -43,17 +44,31 @@ export type {
  * reports no score, and the pill renders a dash: a question nobody answered and
  * a question the model failed on are both "not judged", and printing 0 for
  * either would assert the student earned nothing when in fact nothing looked.
- *
  * A marked answer genuinely worth zero is a different thing, and does show 0.
+ *
+ * `reviewText` is always populated, because the panel that shows it is always
+ * there. The two unscored states get their explanation from here rather than
+ * from the UI, so the reason a card says nothing lives beside the reason it has
+ * no score.
  */
-function reviewOf(answered: boolean, awardedMarks: number | undefined): QuestionReview {
+function reviewOf(answered: boolean, marked: MarkedAnswer | undefined): QuestionReview {
   if (!answered) {
-    return { awardedMarks: null, feedback: null, status: 'unattempted' };
+    return {
+      awardedMarks: null,
+      reviewText: 'No answer for this question was found on the sheet.',
+      status: 'unattempted',
+    };
   }
-  if (awardedMarks === undefined) {
-    return { awardedMarks: null, feedback: null, status: 'not-marked' };
+
+  if (marked === undefined) {
+    return { awardedMarks: null, reviewText: REVIEW_FAILED, status: 'not-marked' };
   }
-  return { awardedMarks, feedback: null, status: 'reviewed' };
+
+  return {
+    awardedMarks: marked.awardedMarks,
+    reviewText: marked.reviewText,
+    status: 'reviewed',
+  };
 }
 
 function documentPayload(

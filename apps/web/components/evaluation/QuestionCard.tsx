@@ -92,42 +92,34 @@ export function QuestionCard({
 }
 
 /**
- * The expanded panel.
+ * The expanded panel: what the AI made of this answer.
  *
- * The marking call returns a score and nothing else by design, so there is no
- * written feedback to quote yet. Rather than show an empty box, each state says
- * what is actually known - and a scored question reports its score rather than
- * claiming nothing has looked at it.
+ * The API always supplies `reviewText`, including for the two states with no
+ * score, so there is no fallback copy here - the reason an answer went unmarked
+ * belongs next to the marking that produced it, not in the component.
+ *
+ * `line-clamp-2` is the hard guarantee behind the two-line rule. The API caps
+ * the text at roughly two lines of this panel's width, but "two lines" depends
+ * on how wide the card is, and on a phone that same string wraps to four. The
+ * clamp holds at every width; the cap is what keeps the clamp from ever having
+ * to hide anything on a normal screen.
  */
 function AiFeedback({ question }: { question: QuestionPayload }) {
   const { review } = question;
-
-  const body = review.feedback ?? placeholderFor(question);
+  const scored = review.status === 'reviewed';
 
   return (
     <div className="bg-surface-chip mt-3 rounded-xl p-3.5">
       <h3 className="text-ink text-[0.9rem] font-semibold">AI Feedback</h3>
       <p
-        className={`mt-1.5 text-[0.875rem] leading-relaxed ${
-          review.feedback === null ? 'text-ink-faint' : 'text-ink-muted'
+        // The full string on hover, for the rare narrow-screen clamp.
+        title={review.reviewText}
+        className={`mt-1.5 line-clamp-2 text-[0.875rem] leading-relaxed ${
+          scored ? 'text-ink-muted' : 'text-ink-faint'
         }`}
       >
-        {body}
+        {review.reviewText}
       </p>
     </div>
   );
-}
-
-/** What the panel says when there is no written feedback to show. */
-function placeholderFor({ review, marks }: QuestionPayload): string {
-  if (review.status === 'unattempted') {
-    return 'No answer for this question was found on the sheet.';
-  }
-
-  if (review.status === 'reviewed' && review.awardedMarks !== null) {
-    const outOf = marks === undefined ? '' : ` out of ${marks}`;
-    return `AI marking scored this ${review.awardedMarks}${outOf}. Written feedback is not generated yet.`;
-  }
-
-  return 'Not marked - AI marking did not return a score for this question.';
 }

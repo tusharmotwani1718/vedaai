@@ -640,6 +640,10 @@ const MarkedAnswersSchema = z.object({
     z.object({
       ref: z.number(),
       awardedMarks: z.number(),
+      // `.catch` rather than a plain string: a required field the model omits
+      // for one entry would fail the whole array and cost a dozen good scores.
+      // A missing comment becomes empty here and is replaced downstream.
+      reviewText: z.string().catch(''),
     }),
   ),
 });
@@ -658,13 +662,79 @@ export interface AnswerToMark {
   answerText: string;
 }
 
+/** What the model returned for one answer, once cleaned up. */
+export interface MarkedAnswer {
+  awardedMarks: number;
+  /** At most two lines. Never empty - see `toReviewLine`. */
+  reviewText: string;
+}
+
 export interface AnswerMarkingResult {
-  /** questionId -> awarded marks. A question absent here was not marked. */
-  byQuestionId: Map<string, number>;
+  /** questionId -> what the model said. A question absent here was not marked. */
+  byQuestionId: Map<string, MarkedAnswer>;
   /** Questions sent to the model that came back without a usable score. */
   unmarked: string[];
   /** Recorded so the payload can say what produced the numbers. */
   model: string;
+}
+
+/** Shown whenever the model produced no usable comment for an answer. */
+export const REVIEW_FAILED = 'AI failed to review this answer';
+
+/**
+ * Roughly two lines in the card the comment is rendered in.
+ *
+ * Measured against the panel in the split view, which is about 540px wide at
+ * 14px - a little over 80 characters a line. The UI clamps to two lines as
+ * well, so a narrow screen cannot overflow either; this cap is what stops the
+ * payload carrying an essay nobody will ever see the end of.
+ */
+const REVIEW_MAX_CHARS = 160;
+
+/** Marks a comment that was cut mid-sentence. Counts against the budget. */
+const ELLIPSIS = '...';
+
+/**
+ * How far into the budget a sentence must end before it is worth stopping
+ * there. Below this, cutting at the sentence would discard more of the comment
+ * than the tidier ending is worth.
+ */
+const SENTENCE_CUT_MIN = 0.6;
+
+/**
+ * Reduces whatever the model wrote to a single short line of prose.
+ *
+ * The prompt asks for two sentences, but a prompt is a request and not a
+ * guarantee - models return paragraphs, bullet lists and stray newlines. This
+ * is the guarantee: whitespace collapses to single spaces, so a multi-line
+ * answer can never break the card's layout, and anything past the budget is cut
+ * at a sentence end where possible and a word boundary otherwise. Cutting
+ * mid-word reads like a bug; cutting at a full stop reads like brevity.
+ */
+export function toReviewLine(raw: string): string {
+  const flat = raw.replace(/\s+/g, ' ').trim();
+  if (flat === '') return REVIEW_FAILED;
+  if (flat.length <= REVIEW_MAX_CHARS) return flat;
+
+  // A sentence ending late in the budget makes a clean, complete comment, and
+  // needs no ellipsis. Ending early does not: stopping at a first sentence that
+  // used a third of the space throws away more than it saves.
+  const window = flat.slice(0, REVIEW_MAX_CHARS);
+  const sentenceEnd = Math.max(
+    window.lastIndexOf('. '),
+    window.lastIndexOf('! '),
+    window.lastIndexOf('? '),
+  );
+  if (sentenceEnd >= REVIEW_MAX_CHARS * SENTENCE_CUT_MIN) {
+    return window.slice(0, sentenceEnd + 1);
+  }
+
+  // Otherwise cut at a word. The ellipsis is budgeted for, not added on top -
+  // the cap is on what is rendered, and three dots are three characters of it.
+  const body = flat.slice(0, REVIEW_MAX_CHARS - ELLIPSIS.length);
+  const lastSpace = body.lastIndexOf(' ');
+  const cut = lastSpace > 0 ? body.slice(0, lastSpace) : body;
+  return `${cut.replace(/[,;:.]$/, '')}${ELLIPSIS}`;
 }
 
 /**
@@ -696,7 +766,7 @@ function chunk<T>(items: T[], size: number): T[][] {
  * Returns only the entries that came back cleanly and matched a ref we issued;
  * anything else is simply absent, and the caller reports it as unmarked.
  */
-async function markBatch(batch: AnswerToMark[]): Promise<Map<string, number>> {
+async function markBatch(batch: AnswerToMark[]): Promise<Map<string, MarkedAnswer>> {
   // Refs are positions within this batch, so they stay small however long the
   // paper is. The model never sees a questionId.
   const byRef = new Map(batch.map((item, index) => [index + 1, item]));
@@ -750,9 +820,9 @@ async function markBatch(batch: AnswerToMark[]): Promise<Map<string, number>> {
  */
 export function joinScores(
   byRef: Map<number, AnswerToMark>,
-  entries: Array<{ ref: number; awardedMarks: number }>,
-): Map<string, number> {
-  const scored = new Map<string, number>();
+  entries: Array<{ ref: number; awardedMarks: number; reviewText?: string }>,
+): Map<string, MarkedAnswer> {
+  const scored = new Map<string, MarkedAnswer>();
 
   for (const entry of entries) {
     const item = byRef.get(entry.ref);
@@ -760,8 +830,15 @@ export function joinScores(
     // which question it belongs to.
     if (item === undefined || scored.has(item.questionId)) continue;
 
-    const value = clampMarks(entry.awardedMarks, item.maxMarks);
-    if (value !== null) scored.set(item.questionId, value);
+    const awardedMarks = clampMarks(entry.awardedMarks, item.maxMarks);
+    if (awardedMarks === null) continue;
+
+    // A usable score with no usable comment still counts as marked - the number
+    // is the part a teacher acts on, and the comment says it went missing.
+    scored.set(item.questionId, {
+      awardedMarks,
+      reviewText: toReviewLine(entry.reviewText ?? ''),
+    });
   }
 
   return scored;
@@ -776,7 +853,7 @@ export function joinScores(
  * perfectly good, or inventing numbers to fill the gaps.
  */
 export async function markAnswers(items: AnswerToMark[]): Promise<AnswerMarkingResult> {
-  const byQuestionId = new Map<string, number>();
+  const byQuestionId = new Map<string, MarkedAnswer>();
   const batches = chunk(items, QUESTIONS_PER_CALL);
 
   let cursor = 0;
@@ -788,8 +865,8 @@ export async function markAnswers(items: AnswerToMark[]): Promise<AnswerMarkingR
       if (batch === undefined) return;
 
       try {
-        for (const [questionId, marks] of await markBatch(batch)) {
-          byQuestionId.set(questionId, marks);
+        for (const [questionId, marked] of await markBatch(batch)) {
+          byQuestionId.set(questionId, marked);
         }
       } catch (err) {
         const label = `batch ${index + 1}/${batches.length}`;
